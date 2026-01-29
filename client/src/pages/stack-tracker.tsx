@@ -228,6 +228,11 @@ export default function StackTracker() {
   const [selectedCustomerId, setSelectedCustomerId] = React.useState<string>("");
   const [customerSearch, setCustomerSearch] = React.useState("");
   const [newCustomerName, setNewCustomerName] = React.useState("");
+  const [newCustomerAddress, setNewCustomerAddress] = React.useState("");
+  const [newCustomerPrimaryContact, setNewCustomerPrimaryContact] = React.useState("");
+  const [newCustomerPhone, setNewCustomerPhone] = React.useState("");
+  const [newCustomerContactPhone, setNewCustomerContactPhone] = React.useState("");
+  const [newCustomerContactEmail, setNewCustomerContactEmail] = React.useState("");
   const [newCustomerServiceTiers, setNewCustomerServiceTiers] = React.useState<("Essentials" | "MSP" | "Break-Fix")[]>(["Essentials"]);
 
   const categories = categoriesQuery.data ?? [];
@@ -316,6 +321,11 @@ export default function StackTracker() {
     createCustomerMutation.mutate(
       {
         name: newCustomerName.trim(),
+        address: newCustomerAddress.trim() || null,
+        primaryContactName: newCustomerPrimaryContact.trim() || null,
+        customerPhone: newCustomerPhone.trim() || null,
+        contactPhone: newCustomerContactPhone.trim() || null,
+        contactEmail: newCustomerContactEmail.trim() || null,
         serviceTiers: newCustomerServiceTiers,
         currentToolIds: [],
         baselineId,
@@ -324,6 +334,11 @@ export default function StackTracker() {
         onSuccess: (customer) => {
           setSelectedCustomerId(customer.id);
           setNewCustomerName("");
+          setNewCustomerAddress("");
+          setNewCustomerPrimaryContact("");
+          setNewCustomerPhone("");
+          setNewCustomerContactPhone("");
+          setNewCustomerContactEmail("");
           setNewCustomerServiceTiers(["Essentials"]);
         },
       }
@@ -581,6 +596,26 @@ export default function StackTracker() {
                         <ScoreRing value={coverage.pct} testId="score-coverage" />
                       </div>
 
+                      {(selectedCustomer.address || selectedCustomer.primaryContactName || selectedCustomer.contactEmail) && (
+                        <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                          {selectedCustomer.address && (
+                            <div data-testid="text-selected-customer-address">{selectedCustomer.address}</div>
+                          )}
+                          {selectedCustomer.primaryContactName && (
+                            <div data-testid="text-selected-customer-contact">
+                              {selectedCustomer.primaryContactName}
+                              {selectedCustomer.contactPhone && ` • ${selectedCustomer.contactPhone}`}
+                            </div>
+                          )}
+                          {selectedCustomer.contactEmail && (
+                            <div data-testid="text-selected-customer-email">{selectedCustomer.contactEmail}</div>
+                          )}
+                          {selectedCustomer.customerPhone && !selectedCustomer.primaryContactName && (
+                            <div data-testid="text-selected-customer-phone">{selectedCustomer.customerPhone}</div>
+                          )}
+                        </div>
+                      )}
+
                       <Separator className="my-3" />
 
                       <div className="grid gap-2">
@@ -628,10 +663,10 @@ export default function StackTracker() {
                     )}
                   </div>
 
-                  <div className="mt-4 grid gap-3">
+                  <div className="mt-4 grid gap-3 max-h-[400px] overflow-y-auto pr-2">
                     <div>
                       <Label data-testid="label-new-customer-name" className="text-xs text-muted-foreground">
-                        Customer name
+                        Customer name *
                       </Label>
                       <Input
                         data-testid="input-new-customer-name"
@@ -644,8 +679,79 @@ export default function StackTracker() {
                     </div>
 
                     <div>
+                      <Label data-testid="label-new-customer-address" className="text-xs text-muted-foreground">
+                        Address
+                      </Label>
+                      <Input
+                        data-testid="input-new-customer-address"
+                        placeholder="e.g., 123 Main St, City, ST 12345"
+                        value={newCustomerAddress}
+                        onChange={(e) => setNewCustomerAddress(e.target.value)}
+                        className="mt-1 h-10 rounded-xl"
+                        disabled={!isAdmin}
+                      />
+                    </div>
+
+                    <div>
+                      <Label data-testid="label-new-customer-primary-contact" className="text-xs text-muted-foreground">
+                        Primary contact name
+                      </Label>
+                      <Input
+                        data-testid="input-new-customer-primary-contact"
+                        placeholder="e.g., John Smith"
+                        value={newCustomerPrimaryContact}
+                        onChange={(e) => setNewCustomerPrimaryContact(e.target.value)}
+                        className="mt-1 h-10 rounded-xl"
+                        disabled={!isAdmin}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label data-testid="label-new-customer-phone" className="text-xs text-muted-foreground">
+                          Customer phone
+                        </Label>
+                        <Input
+                          data-testid="input-new-customer-phone"
+                          placeholder="(555) 123-4567"
+                          value={newCustomerPhone}
+                          onChange={(e) => setNewCustomerPhone(e.target.value)}
+                          className="mt-1 h-10 rounded-xl"
+                          disabled={!isAdmin}
+                        />
+                      </div>
+                      <div>
+                        <Label data-testid="label-new-customer-contact-phone" className="text-xs text-muted-foreground">
+                          Contact phone
+                        </Label>
+                        <Input
+                          data-testid="input-new-customer-contact-phone"
+                          placeholder="(555) 987-6543"
+                          value={newCustomerContactPhone}
+                          onChange={(e) => setNewCustomerContactPhone(e.target.value)}
+                          className="mt-1 h-10 rounded-xl"
+                          disabled={!isAdmin}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label data-testid="label-new-customer-contact-email" className="text-xs text-muted-foreground">
+                        Contact email
+                      </Label>
+                      <Input
+                        data-testid="input-new-customer-contact-email"
+                        placeholder="e.g., john@example.com"
+                        value={newCustomerContactEmail}
+                        onChange={(e) => setNewCustomerContactEmail(e.target.value)}
+                        className="mt-1 h-10 rounded-xl"
+                        disabled={!isAdmin}
+                      />
+                    </div>
+
+                    <div>
                       <Label data-testid="label-new-customer-tiers" className="text-xs text-muted-foreground">
-                        Service tiers (select all that apply)
+                        Service tiers * (select all that apply)
                       </Label>
                       <div className="mt-2 grid gap-2">
                         {(["Essentials", "MSP", "Break-Fix"] as const).map((tier) => (

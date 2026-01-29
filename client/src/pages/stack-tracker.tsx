@@ -11,6 +11,10 @@ import {
   Sparkles,
   Users,
   Settings,
+  Upload,
+  AlertCircle,
+  FileSpreadsheet,
+  X,
 } from "lucide-react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
@@ -27,6 +31,8 @@ import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { useCategories, useTools, useBaselines, useCustomers, useCreateCustomer, useUpdateCustomer } from "@/hooks/use-stack-data";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { api } from "@/lib/api";
 import type { Category, Tool, Baseline, Customer } from "@shared/schema";
 
 type Role = "admin" | "tech";
@@ -235,6 +241,18 @@ export default function StackTracker() {
   const [newCustomerContactEmail, setNewCustomerContactEmail] = React.useState("");
   const [newCustomerServiceTiers, setNewCustomerServiceTiers] = React.useState<("Essentials" | "MSP" | "Break-Fix")[]>(["Essentials"]);
 
+  const [showImportDialog, setShowImportDialog] = React.useState(false);
+  const [importFile, setImportFile] = React.useState<File | null>(null);
+  const [importParsedData, setImportParsedData] = React.useState<{
+    headers: string[];
+    columnMapping: Record<string, string>;
+    data: Record<string, any>[];
+    rowCount: number;
+  } | null>(null);
+  const [isImporting, setIsImporting] = React.useState(false);
+  const [importError, setImportError] = React.useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
   const categories = categoriesQuery.data ?? [];
   const toolCatalog = toolsQuery.data ?? [];
   const baselines = baselinesQuery.data ?? [];
@@ -343,6 +361,69 @@ export default function StackTracker() {
         },
       }
     );
+  }
+
+  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImportFile(file);
+    setImportError(null);
+    setImportParsedData(null);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const base64 = (event.target?.result as string).split(",")[1];
+          const result = await api.customers.parseFile(base64, file.name);
+          setImportParsedData(result);
+        } catch (err: any) {
+          setImportError(err.message || "Failed to parse file");
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (err: any) {
+      setImportError(err.message || "Failed to read file");
+    }
+  }
+
+  async function handleImport() {
+    if (!importParsedData) return;
+
+    setIsImporting(true);
+    setImportError(null);
+
+    try {
+      const result = await api.customers.importBulk(importParsedData.data);
+      
+      if (result.success) {
+        toast({
+          title: "Import complete",
+          description: `Successfully imported ${result.imported} customers${result.errors.length > 0 ? ` (${result.errors.length} failed)` : ""}.`,
+        });
+
+        customersQuery.refetch();
+        setShowImportDialog(false);
+        setImportFile(null);
+        setImportParsedData(null);
+      } else {
+        setImportError("Import failed. Check your data and try again.");
+      }
+    } catch (err: any) {
+      setImportError(err.message || "Failed to import customers");
+    } finally {
+      setIsImporting(false);
+    }
+  }
+
+  function resetImport() {
+    setImportFile(null);
+    setImportParsedData(null);
+    setImportError(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   }
 
   function copyGapReport() {
@@ -627,6 +708,16 @@ export default function StackTracker() {
                     Admin Portal
                   </Button>
                 </Link>
+                <Button 
+                  variant="outline" 
+                  className="rounded-xl" 
+                  data-testid="button-import-customers"
+                  onClick={() => setShowImportDialog(true)}
+                  disabled={!isAdmin}
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import
+                </Button>
                 <div className="flex items-center gap-2 rounded-2xl border bg-white/60 p-2 shadow-sm dark:bg-white/5">
                   <div className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-blue-600/18 to-violet-600/10">
                     <Shield className="h-4 w-4 text-foreground" />
@@ -1309,6 +1400,147 @@ export default function StackTracker() {
           Prototype: data is stored in-memory for demo purposes.
         </div>
       </div>
+
+      <Dialog open={showImportDialog} onOpenChange={(open) => {
+        setShowImportDialog(open);
+        if (!open) resetImport();
+      }}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="h-5 w-5" />
+              Import Customers
+            </DialogTitle>
+            <DialogDescription>
+              Upload an Excel or CSV file to import multiple customers at once.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-4">
+            <div className="border-2 border-dashed rounded-xl p-6 text-center">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                onChange={handleFileSelect}
+                className="hidden"
+                id="import-file-input"
+                data-testid="input-import-file"
+              />
+              <label 
+                htmlFor="import-file-input" 
+                className="cursor-pointer flex flex-col items-center gap-2"
+              >
+                <Upload className="h-8 w-8 text-muted-foreground" />
+                <div className="text-sm font-medium">
+                  {importFile ? importFile.name : "Click to upload Excel or CSV"}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Supports .xlsx, .xls, and .csv files
+                </div>
+              </label>
+            </div>
+
+            {importError && (
+              <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-4 flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                <div className="text-sm text-destructive">{importError}</div>
+              </div>
+            )}
+
+            {importParsedData && (
+              <div className="space-y-4">
+                <div className="rounded-xl border bg-muted/30 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-sm font-medium">Preview</div>
+                    <Badge variant="secondary" data-testid="badge-import-rows">
+                      {importParsedData.rowCount} rows
+                    </Badge>
+                  </div>
+
+                  <div className="text-xs text-muted-foreground mb-2">
+                    Detected columns: {importParsedData.headers.join(", ")}
+                  </div>
+
+                  <div className="max-h-48 overflow-y-auto border rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-xs">Name</TableHead>
+                          <TableHead className="text-xs">Contact</TableHead>
+                          <TableHead className="text-xs">Email</TableHead>
+                          <TableHead className="text-xs">Tiers</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {importParsedData.data.slice(0, 5).map((row, i) => (
+                          <TableRow key={i} data-testid={`row-preview-${i}`}>
+                            <TableCell className="text-xs py-2">{row.name || "—"}</TableCell>
+                            <TableCell className="text-xs py-2">
+                              {row.primaryContactName || row.contactName || "—"}
+                            </TableCell>
+                            <TableCell className="text-xs py-2">
+                              {row.contactEmail || row.email || "—"}
+                            </TableCell>
+                            <TableCell className="text-xs py-2">
+                              {row.serviceTiers || "Essentials"}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {importParsedData.rowCount > 5 && (
+                    <div className="text-xs text-muted-foreground mt-2 text-center">
+                      Showing 5 of {importParsedData.rowCount} rows
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3 justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={resetImport}
+                    className="rounded-xl"
+                    data-testid="button-reset-import"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleImport}
+                    disabled={isImporting}
+                    className="rounded-xl"
+                    data-testid="button-confirm-import"
+                  >
+                    {isImporting ? (
+                      <>Importing...</>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Import {importParsedData.rowCount} Customers
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div className="text-xs text-muted-foreground space-y-1">
+              <div className="font-medium">Expected columns:</div>
+              <ul className="list-disc list-inside space-y-0.5">
+                <li><strong>name</strong> or <strong>company</strong> (required) - Customer name</li>
+                <li><strong>address</strong> - Physical address</li>
+                <li><strong>primaryContactName</strong> or <strong>contactName</strong> - Primary contact</li>
+                <li><strong>customerPhone</strong> or <strong>phone</strong> - Main phone number</li>
+                <li><strong>contactEmail</strong> or <strong>email</strong> - Contact email</li>
+                <li><strong>serviceTiers</strong> - Comma-separated: Essentials, MSP, Break-Fix</li>
+              </ul>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

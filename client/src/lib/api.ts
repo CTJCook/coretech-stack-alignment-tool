@@ -91,5 +91,25 @@ export const api = {
       fetch(`${API_BASE}/customers/${id}`, { method: "DELETE" }),
     getGapReport: (id: string) =>
       fetchJSON<any>(`${API_BASE}/customers/${id}/gap-report`),
+    parseFile: (fileData: string, fileName: string) =>
+      fetchJSON<{
+        headers: string[];
+        columnMapping: Record<string, string>;
+        data: Record<string, any>[];
+        rowCount: number;
+      }>(`${API_BASE}/customers/parse-file`, {
+        method: "POST",
+        body: JSON.stringify({ fileData, fileName }),
+      }),
+    importBulk: (data: Record<string, any>[]) =>
+      fetchJSON<{
+        success: boolean;
+        imported: number;
+        errors: { row: number; error: string }[];
+        total: number;
+      }>(`${API_BASE}/customers/import`, {
+        method: "POST",
+        body: JSON.stringify({ data }),
+      }),
   },
 };

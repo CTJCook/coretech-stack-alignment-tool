@@ -356,21 +356,27 @@ export async function registerRoutes(
 
       // Map headers to our expected fields
       const columnMapping: Record<string, string> = {};
-      const expectedFields = ["name", "address", "primaryContactName", "contactName", "customerPhone", "phone", "contactPhone", "contactEmail", "email", "serviceTiers", "baseline"];
       
-      headers.forEach((header, index) => {
+      headers.forEach((header) => {
         const normalized = header.toLowerCase().replace(/[_\s-]/g, "");
-        for (const field of expectedFields) {
-          if (normalized.includes(field.toLowerCase()) || field.toLowerCase().includes(normalized)) {
-            columnMapping[header] = field;
-            break;
-          }
-        }
-        // Fallback mappings
-        if (!columnMapping[header]) {
-          if (normalized.includes("company") || normalized === "customer") columnMapping[header] = "name";
-          else if (normalized.includes("contact") && normalized.includes("name")) columnMapping[header] = "primaryContactName";
-          else if (normalized.includes("tier") || normalized.includes("bundle") || normalized.includes("service")) columnMapping[header] = "serviceTiers";
+        
+        // Exact matches first
+        if (normalized === "name" || normalized === "customername" || normalized === "company" || normalized === "customer") {
+          columnMapping[header] = "name";
+        } else if (normalized === "address" || normalized === "customeraddress") {
+          columnMapping[header] = "address";
+        } else if (normalized === "primarycontactname" || normalized === "contactname" || normalized === "contact") {
+          columnMapping[header] = "primaryContactName";
+        } else if (normalized === "customerphone" || normalized === "phone" || normalized === "mainphone") {
+          columnMapping[header] = "customerPhone";
+        } else if (normalized === "contactphone") {
+          columnMapping[header] = "contactPhone";
+        } else if (normalized === "contactemail" || normalized === "email") {
+          columnMapping[header] = "contactEmail";
+        } else if (normalized === "servicetiers" || normalized === "tiers" || normalized === "tier" || normalized === "bundle" || normalized === "bundles") {
+          columnMapping[header] = "serviceTiers";
+        } else if (normalized === "baseline") {
+          columnMapping[header] = "baseline";
         }
       });
 

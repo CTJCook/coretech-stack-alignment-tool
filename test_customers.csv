@@ -1,0 +1,6 @@
+name,address,primaryContactName,customerPhone,contactEmail,serviceTiers
+Acme Corp,123 Main St Boston MA 02101,John Smith,555-123-4567,john@acme.com,Essentials;MSP
+TechStart Inc,456 Oak Ave Denver CO 80202,Jane Doe,555-234-5678,jane@techstart.com,MSP
+Mountain View Dental,789 Pine Rd Seattle WA 98101,Dr. Robert Chen,555-345-6789,robert@mvdental.com,Essentials
+Pacific Trading,321 Harbor Blvd San Francisco CA 94102,Lisa Wong,555-456-7890,lisa@pacifictrading.com,Break-Fix
+Healthcare Plus,654 Medical Dr Chicago IL 60601,Dr. Sarah Johnson,555-567-8901,sarah@healthcareplus.com,Essentials;MSP;Break-Fix

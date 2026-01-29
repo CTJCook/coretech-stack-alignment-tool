@@ -24,257 +24,13 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { useCategories, useTools, useBaselines, useCustomers, useCreateCustomer, useUpdateCustomer } from "@/hooks/use-stack-data";
+import type { Category, Tool, Baseline, Customer } from "@shared/schema";
 
 type Role = "admin" | "tech";
 
-type Tool = {
-  id: string;
-  name: string;
-  vendor?: string;
-  categoryId: string;
-  tags?: string[];
-};
-
-type Category = {
-  id: string;
-  name: string;
-  description: string;
-};
-
-type BaselineTemplate = {
-  id: string;
-  name: string;
-  description: string;
-  requiredToolIds: string[];
-  optionalUpsellToolIds: string[];
-};
-
-type Customer = {
-  id: string;
-  name: string;
-  type: "SMB" | "Compliance" | "Co-Managed" | "MSP";
-  currentToolIds: string[];
-  baselineId: string;
-};
-
-const categories: Category[] = [
-  { id: "rmm", name: "RMM", description: "Monitoring, patching, remote control" },
-  { id: "psa", name: "PSA", description: "Tickets, billing, agreements" },
-  { id: "deploy", name: "Deployment", description: "Provisioning, onboarding, automation" },
-  { id: "mdm", name: "MDM", description: "Mobile/device management" },
-  { id: "m365", name: "Microsoft 365", description: "Identity + productivity" },
-  { id: "iam", name: "Identity & MFA", description: "SSO, conditional access, MFA" },
-  { id: "endpoint", name: "Endpoint Security", description: "EDR, hardening, privilege" },
-  { id: "email", name: "Email Security", description: "Filtering, phishing protection" },
-  { id: "web", name: "Web Filtering", description: "DNS/agent web filtering" },
-  { id: "backup", name: "Backup", description: "Server/workstation + SaaS backup" },
-  { id: "network", name: "Network", description: "Firewall, Wi‑Fi, monitoring" },
-  { id: "monitoring", name: "Monitoring", description: "Cloud/network/asset visibility" },
-  { id: "docs", name: "Documentation", description: "Passwords, runbooks" },
-  { id: "siem", name: "SIEM", description: "Log collection + alerting" },
-  { id: "sat", name: "Security Awareness", description: "Phishing tests, training" },
-  { id: "itdr", name: "ITDR", description: "Identity threat detection" },
-];
-
-const toolCatalog: Tool[] = [
-  // RMM / PSA
-  { id: "ninja", name: "NinjaOne RMM", vendor: "NinjaOne", categoryId: "rmm", tags: ["rmm"] },
-  { id: "datto_rmm", name: "Datto RMM", vendor: "Kaseya", categoryId: "rmm" },
-
-  { id: "cw_manage", name: "Manage", vendor: "ConnectWise", categoryId: "psa" },
-
-  // Deployment
-  { id: "immybot", name: "ImmyBot", vendor: "ImmyBot", categoryId: "deploy" },
-
-  // Microsoft 365 / Identity
-  { id: "m365_bp", name: "Microsoft 365 Business Premium", vendor: "Microsoft", categoryId: "m365" },
-  { id: "google_workspace", name: "Google Workspace", vendor: "Google", categoryId: "m365" },
-
-  { id: "entra_p2", name: "Microsoft Entra ID P2", vendor: "Microsoft", categoryId: "iam" },
-  { id: "entra", name: "Entra ID P1", vendor: "Microsoft", categoryId: "iam" },
-  { id: "duo", name: "Duo MFA", vendor: "Cisco", categoryId: "iam" },
-
-  // Device management
-  { id: "addigy", name: "Addigy (Mac Management)", vendor: "Addigy", categoryId: "mdm" },
-  { id: "ninja_mdm", name: "NinjaOne MDM", vendor: "NinjaOne", categoryId: "mdm" },
-  { id: "intune", name: "Microsoft Intune", vendor: "Microsoft", categoryId: "mdm" },
-
-  // Endpoint security
-  { id: "defender_endpoint", name: "Microsoft Defender for Endpoint", vendor: "Microsoft", categoryId: "endpoint" },
-  { id: "sentinelone", name: "SentinelOne", vendor: "SentinelOne", categoryId: "endpoint" },
-  { id: "huntress_edr", name: "Huntress EDR", vendor: "Huntress", categoryId: "endpoint" },
-
-  // Email security
-  { id: "defender_exchange", name: "Microsoft Defender for Exchange", vendor: "Microsoft", categoryId: "email" },
-  { id: "abnormal", name: "Abnormal", vendor: "Abnormal", categoryId: "email" },
-
-  { id: "mailprotector_cloudfilter", name: "Mailprotector CloudFilter", vendor: "Mailprotector", categoryId: "email" },
-  { id: "mailprotector_bracket", name: "Mailprotector Bracket", vendor: "Mailprotector", categoryId: "email" },
-  { id: "mailprotector_secure_store", name: "Mailprotector Secure Store", vendor: "Mailprotector", categoryId: "email" },
-
-  // Web filtering
-  { id: "zorus", name: "Zorus Web Filtering", vendor: "Zorus", categoryId: "web" },
-
-  // Backup
-  { id: "dropsuite", name: "Dropsuite Backup", vendor: "Dropsuite", categoryId: "backup" },
-  { id: "axcient", name: "Axcient Backup", vendor: "Axcient", categoryId: "backup" },
-  { id: "datto_backup", name: "Datto Backup", vendor: "Kaseya", categoryId: "backup" },
-  { id: "veeam", name: "Veeam", vendor: "Veeam", categoryId: "backup" },
-  { id: "afi", name: "AFI.ai", vendor: "AFI.ai", categoryId: "backup" },
-
-  // Network
-  { id: "fortigate", name: "FortiGate Firewall", vendor: "Fortinet", categoryId: "network" },
-  { id: "fortinet", name: "Fortinet", vendor: "Fortinet", categoryId: "network" },
-  { id: "ubiquiti", name: "Ubiquiti / UniFi", vendor: "Ubiquiti", categoryId: "network" },
-  { id: "aruba_instant_on", name: "Aruba Instant On", vendor: "HPE Aruba", categoryId: "network" },
-  { id: "meraki", name: "Meraki Firewall", vendor: "Cisco", categoryId: "network" },
-
-  // Monitoring / Visibility
-  { id: "havoc", name: "Havoc Network Monitoring", vendor: "Havoc", categoryId: "monitoring" },
-  { id: "liongard", name: "Liongard", vendor: "Liongard", categoryId: "monitoring" },
-
-  // Documentation / Credentials / Privilege
-  { id: "hudu", name: "HUDU", vendor: "Hudu", categoryId: "docs" },
-  { id: "passwordboss", name: "CyberFox PasswordBoss", vendor: "CyberFox", categoryId: "docs" },
-  { id: "itglue", name: "IT Glue", vendor: "Kaseya", categoryId: "docs" },
-  { id: "autoelevate", name: "CyberFox AutoElevate", vendor: "CyberFox", categoryId: "endpoint" },
-
-  // SIEM / Awareness / ITDR
-  { id: "huntress_siem", name: "Huntress SIEM", vendor: "Huntress", categoryId: "siem" },
-  { id: "blumira", name: "Blumira", vendor: "Blumira", categoryId: "siem" },
-  { id: "sentinel", name: "Microsoft Sentinel", vendor: "Microsoft", categoryId: "siem" },
-
-  { id: "huntress_sat", name: "Huntress SAT", vendor: "Huntress", categoryId: "sat" },
-  { id: "huntress_itdr", name: "Huntress ITDR", vendor: "Huntress", categoryId: "itdr" },
-
-  // Other\n  { id: "cip_registered", name: "Registered in CIP", vendor: "(internal) ", categoryId: "docs" },
-  { id: "cipp", name: "CIPP (Microsoft Tenant Management)", vendor: "CIPP", categoryId: "m365" },
-];
-
-const baselines: BaselineTemplate[] = [
-  {
-    id: "msp_baseline",
-    name: "MSP Baseline (Modern M365 + Huntress)",
-    description: "Baseline aligned to a modern MSP stack: RMM + deployment, M365 identity, endpoint + email protections, backups, and visibility.",
-    requiredToolIds: [
-      "hudu",
-      "ninja",
-      "immybot",
-      "cipp",
-      "m365_bp",
-      "entra_p2",
-      "defender_endpoint",
-      "defender_exchange",
-      "autoelevate",
-      "passwordboss",
-      "zorus",
-      "dropsuite",
-      "axcient",
-      "datto_backup",
-      "havoc",
-      "liongard",
-      "ubiquiti",
-      "aruba_instant_on",
-      "fortigate",
-      "duo",
-      "addigy",
-      "ninja_mdm",
-      "intune",
-      "huntress_edr",
-      "huntress_siem",
-      "huntress_sat",
-      "huntress_itdr",
-      "cip_registered"
-    ],
-    optionalUpsellToolIds: ["sentinel", "blumira"],
-  },
-  {
-    id: "smb_standard",
-    name: "SMB Standard",
-    description: "A pragmatic baseline for small-to-mid businesses.",
-    requiredToolIds: ["ninja", "huntress_edr", "afi", "m365_bp", "abnormal", "hudu"],
-    optionalUpsellToolIds: ["blumira", "intune", "meraki"],
-  },
-  {
-    id: "compliance_plus",
-    name: "Compliance+",
-    description: "Stronger controls + visibility for regulated clients.",
-    requiredToolIds: ["ninja", "sentinelone", "veeam", "m365_bp", "hudu", "blumira"],
-    optionalUpsellToolIds: ["sentinel", "intune", "fortinet"],
-  },
-  {
-    id: "co_managed",
-    name: "Co‑Managed IT",
-    description: "A shared-responsibility baseline aligned to internal IT teams.",
-    requiredToolIds: ["cw_manage", "huntress_edr", "afi", "entra", "mailprotector_cloudfilter", "mailprotector_bracket", "mailprotector_secure_store", "itglue"],
-    optionalUpsellToolIds: ["blumira", "jamf", "ubiquiti"],
-  },
-];
-
-const seedCustomers: Customer[] = [
-  {
-    id: "c-msp-internal",
-    name: "MSP Internal Stack",
-    type: "MSP",
-    currentToolIds: [
-      "hudu",
-      "ninja",
-      "immybot",
-      "cip_registered",
-      "cipp",
-      "m365_bp",
-      "entra_p2",
-      "defender_endpoint",
-      "defender_exchange",
-      "autoelevate",
-      "passwordboss",
-      "zorus",
-      "huntress_edr",
-      "huntress_siem",
-      "huntress_sat",
-      "huntress_itdr",
-      "google_workspace",
-      "dropsuite",
-      "axcient",
-      "datto_backup",
-      "havoc",
-      "liongard",
-      "ubiquiti",
-      "aruba_instant_on",
-      "fortigate",
-      "duo",
-      "addigy",
-      "ninja_mdm",
-      "intune"
-    ],
-    baselineId: "msp_baseline",
-  },
-  {
-    id: "c-northpeak",
-    name: "NorthPeak Legal",
-    type: "Compliance",
-    currentToolIds: ["datto_rmm", "sentinelone", "veeam", "m365_bp"],
-    baselineId: "compliance_plus",
-  },
-  {
-    id: "c-archstone",
-    name: "Archstone Retail (Co‑Managed)",
-    type: "Co-Managed",
-    currentToolIds: ["cw_manage", "huntress_edr", "entra", "mailprotector_cloudfilter", "mailprotector_bracket", "mailprotector_secure_store"],
-    baselineId: "co_managed",
-  },
-];
-
 function uniq<T>(arr: T[]) {
   return Array.from(new Set(arr));
-}
-
-function toolById(id: string) {
-  return toolCatalog.find((t) => t.id === id);
-}
-
-function toolsByCategoryId(categoryId: string) {
-  return toolCatalog.filter((t) => t.categoryId === categoryId);
 }
 
 function formatPct(value: number) {
@@ -290,8 +46,14 @@ function computeCoverage(currentToolIds: string[], requiredToolIds: string[]) {
   return { covered, total, pct };
 }
 
-function computeCategoryCoverage(currentToolIds: string[], requiredToolIds: string[]) {
+function computeCategoryCoverage(
+  currentToolIds: string[],
+  requiredToolIds: string[],
+  toolCatalog: Tool[],
+  categories: Category[]
+) {
   const current = new Set(currentToolIds);
+  const toolById = (id: string) => toolCatalog.find((t) => t.id === id);
   const requiredTools = requiredToolIds.map(toolById).filter(Boolean) as Tool[];
 
   const map = new Map<string, { covered: number; total: number }>();
@@ -392,13 +154,15 @@ function ScoreRing({ value, testId }: { value: number; testId: string }) {
 
 function buildGapReportText(opts: {
   customer: Customer;
-  baseline: BaselineTemplate;
+  baseline: Baseline;
   missingToolIds: string[];
   categoryCoverage: ReturnType<typeof computeCategoryCoverage>;
   coverage: ReturnType<typeof computeCoverage>;
   upsellToolIds: string[];
+  toolCatalog: Tool[];
 }) {
-  const { customer, baseline, missingToolIds, categoryCoverage, coverage, upsellToolIds } = opts;
+  const { customer, baseline, missingToolIds, categoryCoverage, coverage, upsellToolIds, toolCatalog } = opts;
+  const toolById = (id: string) => toolCatalog.find((t) => t.id === id);
 
   const lines: string[] = [];
   lines.push(`CoreTech Stack Alignment Tool — Gap Report`);
@@ -451,42 +215,65 @@ function downloadTextFile(filename: string, content: string) {
 export default function StackTracker() {
   const { toast } = useToast();
 
+  const categoriesQuery = useCategories();
+  const toolsQuery = useTools();
+  const baselinesQuery = useBaselines();
+  const customersQuery = useCustomers();
+  const createCustomerMutation = useCreateCustomer();
+  const updateCustomerMutation = useUpdateCustomer();
+
   const [role, setRole] = React.useState<Role>("admin");
-
-  const [customers, setCustomers] = React.useState<Customer[]>(seedCustomers);
-  const [selectedCustomerId, setSelectedCustomerId] = React.useState<string>(seedCustomers[0].id);
-  const selectedCustomer = customers.find((c) => c.id === selectedCustomerId) ?? customers[0];
-
+  const [selectedCustomerId, setSelectedCustomerId] = React.useState<string>("");
   const [customerSearch, setCustomerSearch] = React.useState("");
-
   const [newCustomerName, setNewCustomerName] = React.useState("");
   const [newCustomerType, setNewCustomerType] = React.useState<Customer["type"]>("SMB");
 
+  const categories = categoriesQuery.data ?? [];
+  const toolCatalog = toolsQuery.data ?? [];
+  const baselines = baselinesQuery.data ?? [];
+  const customers = customersQuery.data ?? [];
+
+  React.useEffect(() => {
+    if (customers.length > 0 && !selectedCustomerId) {
+      setSelectedCustomerId(customers[0].id);
+    }
+  }, [customers, selectedCustomerId]);
+
   const isAdmin = role === "admin";
+  const isLoading = categoriesQuery.isLoading || toolsQuery.isLoading || baselinesQuery.isLoading || customersQuery.isLoading;
+  const hasError = categoriesQuery.isError || toolsQuery.isError || baselinesQuery.isError || customersQuery.isError;
 
-  const baseline = baselines.find((b) => b.id === selectedCustomer.baselineId) ?? baselines[0];
+  const selectedCustomer = customers.find((c) => c.id === selectedCustomerId) ?? customers[0];
+  const baseline = baselines.find((b) => b.id === selectedCustomer?.baselineId) ?? baselines[0];
 
-  const requiredToolIds = baseline.requiredToolIds;
-  const missingToolIds = diffMissing(selectedCustomer.currentToolIds, requiredToolIds);
-  const coverage = computeCoverage(selectedCustomer.currentToolIds, requiredToolIds);
-  const categoryCoverage = computeCategoryCoverage(selectedCustomer.currentToolIds, requiredToolIds);
+  const toolById = (id: string) => toolCatalog.find((t) => t.id === id);
+  const toolsByCategoryId = (categoryId: string) => toolCatalog.filter((t) => t.categoryId === categoryId);
 
-  const recommendedUpsellToolIds = baseline.optionalUpsellToolIds.filter(
-    (id) => !selectedCustomer.currentToolIds.includes(id),
-  );
+  const requiredToolIds = baseline?.requiredToolIds ?? [];
+  const missingToolIds = selectedCustomer ? diffMissing(selectedCustomer.currentToolIds, requiredToolIds) : [];
+  const coverage = selectedCustomer ? computeCoverage(selectedCustomer.currentToolIds, requiredToolIds) : { covered: 0, total: 0, pct: 0 };
+  const categoryCoverage = selectedCustomer && baseline
+    ? computeCategoryCoverage(selectedCustomer.currentToolIds, requiredToolIds, toolCatalog, categories)
+    : [];
+
+  const recommendedUpsellToolIds = baseline && selectedCustomer
+    ? baseline.optionalToolIds.filter((id) => !selectedCustomer.currentToolIds.includes(id))
+    : [];
 
   const filteredCustomers = customers.filter((c) =>
     c.name.toLowerCase().includes(customerSearch.trim().toLowerCase()),
   );
 
   function updateSelectedCustomer(patch: Partial<Customer>) {
-    setCustomers((prev) =>
-      prev.map((c) => (c.id === selectedCustomer.id ? { ...c, ...patch } : c)),
-    );
+    if (!selectedCustomer) return;
+    updateCustomerMutation.mutate({
+      id: selectedCustomer.id,
+      data: patch,
+    });
   }
 
   function toggleTool(toolId: string, checked: boolean) {
-    if (!isAdmin) return;
+    if (!isAdmin || !selectedCustomer) return;
     const set = new Set(selectedCustomer.currentToolIds);
     if (checked) set.add(toolId);
     else set.delete(toolId);
@@ -502,32 +289,41 @@ export default function StackTracker() {
       return;
     }
 
-    const id = `c-${newCustomerName.toLowerCase().replace(/\s+/g, "-")}-${Date.now().toString(16)}`;
-    const baselineId =
-      newCustomerType === "Compliance"
-        ? "compliance_plus"
-        : newCustomerType === "Co-Managed"
-          ? "co_managed"
-          : newCustomerType === "MSP"
-            ? "msp_baseline"
-            : "smb_standard";
+    const baselineId = baselines.find((b) => {
+      if (newCustomerType === "Compliance") return b.name.includes("Compliance");
+      if (newCustomerType === "Co-Managed") return b.name.includes("Co-Managed");
+      if (newCustomerType === "MSP") return b.name.includes("MSP") || b.name.includes("Baseline");
+      return b.name.includes("SMB") || b.name.includes("Standard");
+    })?.id ?? baselines[0]?.id;
 
-    const customer: Customer = {
-      id,
-      name: newCustomerName.trim(),
-      type: newCustomerType,
-      currentToolIds: [],
-      baselineId,
-    };
+    if (!baselineId) {
+      toast({
+        title: "No baseline available",
+        description: "Please create a baseline first.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    setCustomers((prev) => [customer, ...prev]);
-    setSelectedCustomerId(customer.id);
-    setNewCustomerName("");
-    setNewCustomerType("SMB");
-    toast({ title: "Customer created", description: `Added ${customer.name}.` });
+    createCustomerMutation.mutate(
+      {
+        name: newCustomerName.trim(),
+        type: newCustomerType,
+        currentToolIds: [],
+        baselineId,
+      },
+      {
+        onSuccess: (customer) => {
+          setSelectedCustomerId(customer.id);
+          setNewCustomerName("");
+          setNewCustomerType("SMB");
+        },
+      }
+    );
   }
 
   function copyGapReport() {
+    if (!selectedCustomer || !baseline) return;
     const text = buildGapReportText({
       customer: selectedCustomer,
       baseline,
@@ -535,6 +331,7 @@ export default function StackTracker() {
       categoryCoverage,
       coverage,
       upsellToolIds: recommendedUpsellToolIds,
+      toolCatalog,
     });
 
     navigator.clipboard
@@ -550,6 +347,7 @@ export default function StackTracker() {
   }
 
   function exportGapReport() {
+    if (!selectedCustomer || !baseline) return;
     const date = new Date();
     const stamp = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
       date.getDate(),
@@ -562,6 +360,7 @@ export default function StackTracker() {
       categoryCoverage,
       coverage,
       upsellToolIds: recommendedUpsellToolIds,
+      toolCatalog,
     });
 
     downloadTextFile(`stack-tracker_gap-report_${selectedCustomer.name.replace(/\s+/g, "-")}_${stamp}.txt`, text);
@@ -572,6 +371,53 @@ export default function StackTracker() {
   const headerSubtitle =
     "Track each customer’s current stack against a baseline, then generate an actionable gap report.";
 
+
+  if (isLoading) {
+    return (
+      <div className="app-shell">
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center p-12">
+            <div className="text-center">
+              <div className="text-lg font-medium">Loading stack data...</div>
+              <div className="mt-2 text-sm text-muted-foreground">Please wait while we fetch your data</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (hasError) {
+    return (
+      <div className="app-shell">
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center p-12">
+            <div className="text-center">
+              <div className="text-lg font-medium text-destructive">Error loading data</div>
+              <div className="mt-2 text-sm text-muted-foreground">
+                {categoriesQuery.error?.message || toolsQuery.error?.message || baselinesQuery.error?.message || customersQuery.error?.message || "An error occurred"}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!selectedCustomer) {
+    return (
+      <div className="app-shell">
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center p-12">
+            <div className="text-center">
+              <div className="text-lg font-medium">No customers available</div>
+              <div className="mt-2 text-sm text-muted-foreground">Create a customer to get started</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="app-shell">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -865,7 +711,7 @@ export default function StackTracker() {
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-muted-foreground" data-testid="text-baseline-upsell-label">Optional</span>
-                          <span className="font-medium" data-testid="text-baseline-upsell-value">{baseline.optionalUpsellToolIds.length}</span>
+                          <span className="font-medium" data-testid="text-baseline-upsell-value">{baseline.optionalToolIds.length}</span>
                         </div>
                       </div>
                     </div>
@@ -1061,7 +907,7 @@ export default function StackTracker() {
                             {tools.map((t) => {
                               const checked = selectedCustomer.currentToolIds.includes(t.id);
                               const required = baseline.requiredToolIds.includes(t.id);
-                              const inUpsell = baseline.optionalUpsellToolIds.includes(t.id);
+                              const inUpsell = baseline.optionalToolIds.includes(t.id);
 
                               return (
                                 <div

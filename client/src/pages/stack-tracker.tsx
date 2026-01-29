@@ -431,10 +431,161 @@ export default function StackTracker() {
     return (
       <div className="app-shell">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center p-12">
-            <div className="text-center">
-              <div className="text-lg font-medium">No customers available</div>
-              <div className="mt-2 text-sm text-muted-foreground">Create a customer to get started</div>
+          <div className="relative overflow-hidden rounded-3xl border bg-white/70 p-6 shadow-md backdrop-blur dark:bg-white/5">
+            <div className="pointer-events-none absolute inset-0 opacity-70">
+              <div className="absolute -left-24 -top-24 size-72 rounded-full bg-gradient-to-br from-blue-500/25 to-indigo-500/0 blur-2xl" />
+              <div className="absolute -right-20 -top-10 size-80 rounded-full bg-gradient-to-br from-violet-500/18 to-fuchsia-500/0 blur-2xl" />
+            </div>
+
+            <div className="relative flex flex-col gap-6">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                  <div className="inline-flex items-center gap-2 rounded-full border bg-white/60 px-3 py-1 text-xs text-muted-foreground shadow-sm dark:bg-white/5">
+                    <Sparkles className="h-4 w-4" />
+                    <span>MSP Tooling Alignment</span>
+                  </div>
+                  <h1 className="mt-3 font-serif text-3xl tracking-tight sm:text-4xl">
+                    CoreTech Stack Alignment Tool
+                  </h1>
+                  <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+                    Track each customer's current stack against a baseline, then generate an actionable gap report.
+                  </p>
+                </div>
+                <Link href="/admin">
+                  <Button variant="outline" className="rounded-xl" data-testid="button-admin-portal-empty">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Admin Portal
+                  </Button>
+                </Link>
+              </div>
+
+              <div className="grid gap-6 lg:grid-cols-2">
+                <Card className="glass noise relative rounded-3xl p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Users className="h-5 w-5 text-muted-foreground" />
+                    <div className="text-lg font-medium">Getting Started</div>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    No customers have been added yet. Create your first customer using the form on the right to begin tracking their software stack against recommended baselines.
+                  </p>
+                  <div className="text-sm text-muted-foreground">
+                    <p className="font-medium mb-2">Quick tips:</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>Add customer details including contact info</li>
+                      <li>Select service tiers that apply (Essentials, MSP, Break-Fix)</li>
+                      <li>Use the Admin Portal to manage categories, tools, and baselines</li>
+                    </ul>
+                  </div>
+                </Card>
+
+                <Card className="glass noise relative rounded-3xl p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Plus className="h-5 w-5 text-muted-foreground" />
+                    <div className="text-lg font-medium">Create Your First Customer</div>
+                  </div>
+
+                  <div className="grid gap-3 max-h-[400px] overflow-y-auto pr-2">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Customer name *</Label>
+                      <Input
+                        data-testid="input-first-customer-name"
+                        placeholder="e.g., Alpine Dental"
+                        value={newCustomerName}
+                        onChange={(e) => setNewCustomerName(e.target.value)}
+                        className="mt-1 h-10 rounded-xl"
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Address</Label>
+                      <Input
+                        data-testid="input-first-customer-address"
+                        placeholder="e.g., 123 Main St, City, ST 12345"
+                        value={newCustomerAddress}
+                        onChange={(e) => setNewCustomerAddress(e.target.value)}
+                        className="mt-1 h-10 rounded-xl"
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Primary contact name</Label>
+                      <Input
+                        data-testid="input-first-customer-primary-contact"
+                        placeholder="e.g., John Smith"
+                        value={newCustomerPrimaryContact}
+                        onChange={(e) => setNewCustomerPrimaryContact(e.target.value)}
+                        className="mt-1 h-10 rounded-xl"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Customer phone</Label>
+                        <Input
+                          data-testid="input-first-customer-phone"
+                          placeholder="(555) 123-4567"
+                          value={newCustomerPhone}
+                          onChange={(e) => setNewCustomerPhone(e.target.value)}
+                          className="mt-1 h-10 rounded-xl"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Contact phone</Label>
+                        <Input
+                          data-testid="input-first-customer-contact-phone"
+                          placeholder="(555) 987-6543"
+                          value={newCustomerContactPhone}
+                          onChange={(e) => setNewCustomerContactPhone(e.target.value)}
+                          className="mt-1 h-10 rounded-xl"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Contact email</Label>
+                      <Input
+                        data-testid="input-first-customer-contact-email"
+                        placeholder="e.g., john@example.com"
+                        value={newCustomerContactEmail}
+                        onChange={(e) => setNewCustomerContactEmail(e.target.value)}
+                        className="mt-1 h-10 rounded-xl"
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Service tiers * (select all that apply)</Label>
+                      <div className="mt-2 grid gap-2">
+                        {(["Essentials", "MSP", "Break-Fix"] as const).map((tier) => (
+                          <div key={tier} className="flex items-center gap-2">
+                            <Checkbox
+                              id={`first-tier-${tier}`}
+                              data-testid={`checkbox-first-tier-${tier}`}
+                              checked={newCustomerServiceTiers.includes(tier)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setNewCustomerServiceTiers([...newCustomerServiceTiers, tier]);
+                                } else {
+                                  setNewCustomerServiceTiers(newCustomerServiceTiers.filter((t) => t !== tier));
+                                }
+                              }}
+                            />
+                            <Label htmlFor={`first-tier-${tier}`} className="text-sm">{tier}</Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <Button
+                      data-testid="button-create-first-customer"
+                      className="h-10 rounded-xl"
+                      onClick={createCustomer}
+                    >
+                      Create Customer
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </Card>
+              </div>
             </div>
           </div>
         </div>

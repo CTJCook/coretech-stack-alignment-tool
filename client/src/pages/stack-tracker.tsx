@@ -107,7 +107,10 @@ const toolCatalog: Tool[] = [
   // Email security
   { id: "defender_exchange", name: "Microsoft Defender for Exchange", vendor: "Microsoft", categoryId: "email" },
   { id: "abnormal", name: "Abnormal", vendor: "Abnormal", categoryId: "email" },
-  { id: "mimecast", name: "Mimecast", vendor: "Mimecast", categoryId: "email" },
+
+  { id: "mailprotector_cloudfilter", name: "Mailprotector CloudFilter", vendor: "Mailprotector", categoryId: "email" },
+  { id: "mailprotector_bracket", name: "Mailprotector Bracket", vendor: "Mailprotector", categoryId: "email" },
+  { id: "mailprotector_secure_store", name: "Mailprotector Secure Store", vendor: "Mailprotector", categoryId: "email" },
 
   // Web filtering
   { id: "zorus", name: "Zorus Web Filtering", vendor: "Zorus", categoryId: "web" },
@@ -203,7 +206,7 @@ const baselines: BaselineTemplate[] = [
     id: "co_managed",
     name: "Co‑Managed IT",
     description: "A shared-responsibility baseline aligned to internal IT teams.",
-    requiredToolIds: ["cw_manage", "huntress_edr", "afi", "entra", "mimecast", "itglue"],
+    requiredToolIds: ["cw_manage", "huntress_edr", "afi", "entra", "mailprotector_cloudfilter", "mailprotector_bracket", "mailprotector_secure_store", "itglue"],
     optionalUpsellToolIds: ["blumira", "jamf", "ubiquiti"],
   },
 ];
@@ -257,7 +260,7 @@ const seedCustomers: Customer[] = [
     id: "c-archstone",
     name: "Archstone Retail (Co‑Managed)",
     type: "Co-Managed",
-    currentToolIds: ["cw_manage", "huntress_edr", "entra", "mimecast"],
+    currentToolIds: ["cw_manage", "huntress_edr", "entra", "mailprotector_cloudfilter", "mailprotector_bracket", "mailprotector_secure_store"],
     baselineId: "co_managed",
   },
 ];

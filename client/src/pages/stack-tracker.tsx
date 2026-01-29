@@ -398,7 +398,7 @@ function buildGapReportText(opts: {
   const { customer, baseline, missingToolIds, categoryCoverage, coverage, upsellToolIds } = opts;
 
   const lines: string[] = [];
-  lines.push(`Stack Tracker — Gap Report`);
+  lines.push(`CoreTech Stack Alignment Tool — Gap Report`);
   lines.push(`Customer: ${customer.name}`);
   lines.push(`Baseline: ${baseline.name}`);
   lines.push(`Coverage: ${Math.round(coverage.pct)}% (${coverage.covered}/${coverage.total})`);
@@ -590,7 +590,7 @@ export default function StackTracker() {
                   data-testid="text-app-title"
                   className="mt-3 font-serif text-3xl tracking-tight sm:text-4xl"
                 >
-                  Stack Tracker
+                  CoreTech Stack Alignment Tool
                 </h1>
                 <p data-testid="text-app-subtitle" className="mt-2 max-w-2xl text-sm text-muted-foreground">
                   {headerSubtitle}

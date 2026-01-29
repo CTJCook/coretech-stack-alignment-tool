@@ -242,6 +242,22 @@ export default function StackTracker() {
   const [newCustomerServiceTiers, setNewCustomerServiceTiers] = React.useState<("Essentials" | "MSP" | "Break-Fix")[]>(["Essentials"]);
 
   const [showImportDialog, setShowImportDialog] = React.useState(false);
+  const categoryTabsRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const tabsEl = categoryTabsRef.current;
+    if (!tabsEl) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        e.preventDefault();
+        tabsEl.scrollLeft += e.deltaY;
+      }
+    };
+
+    tabsEl.addEventListener("wheel", handleWheel, { passive: false });
+    return () => tabsEl.removeEventListener("wheel", handleWheel);
+  }, []);
   const [importFile, setImportFile] = React.useState<File | null>(null);
   const [importParsedData, setImportParsedData] = React.useState<{
     headers: string[];
@@ -1255,7 +1271,7 @@ export default function StackTracker() {
                   </div>
 
                   <Tabs defaultValue={categories[0].id} className="mt-4">
-                    <TabsList className="w-full justify-start overflow-x-auto rounded-2xl bg-white/55 p-1 dark:bg-white/5">
+                    <TabsList ref={categoryTabsRef} className="w-full justify-start overflow-x-auto rounded-2xl bg-white/55 p-1 dark:bg-white/5">
                       {categories.map((c) => (
                         <TabsTrigger
                           key={c.id}

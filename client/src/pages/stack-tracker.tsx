@@ -80,9 +80,7 @@ const toolCatalog: Tool[] = [
   // RMM / PSA
   { id: "ninja", name: "NinjaOne RMM", vendor: "NinjaOne", categoryId: "rmm", tags: ["rmm"] },
   { id: "datto_rmm", name: "Datto RMM", vendor: "Kaseya", categoryId: "rmm" },
-  { id: "cw_automate", name: "Automate", vendor: "ConnectWise", categoryId: "rmm" },
 
-  { id: "halo", name: "HaloPSA", vendor: "Halo", categoryId: "psa" },
   { id: "autotask", name: "Autotask", vendor: "Kaseya", categoryId: "psa" },
   { id: "cw_manage", name: "Manage", vendor: "ConnectWise", categoryId: "psa" },
 
@@ -105,7 +103,6 @@ const toolCatalog: Tool[] = [
   // Email security
   { id: "defender_exchange", name: "Microsoft Defender for Exchange", vendor: "Microsoft", categoryId: "email" },
   { id: "abnormal", name: "Abnormal", vendor: "Abnormal", categoryId: "email" },
-  { id: "proofpoint", name: "Proofpoint", vendor: "Proofpoint", categoryId: "email" },
   { id: "mimecast", name: "Mimecast", vendor: "Mimecast", categoryId: "email" },
 
   // Web filtering
@@ -185,21 +182,21 @@ const baselines: BaselineTemplate[] = [
     id: "smb_standard",
     name: "SMB Standard",
     description: "A pragmatic baseline for small-to-mid businesses.",
-    requiredToolIds: ["ninja", "halo", "huntress_edr", "afi", "m365_bp", "abnormal", "hudu"],
+    requiredToolIds: ["ninja", "huntress_edr", "afi", "m365_bp", "abnormal", "hudu"],
     optionalUpsellToolIds: ["blumira", "intune", "meraki"],
   },
   {
     id: "compliance_plus",
     name: "Compliance+",
     description: "Stronger controls + visibility for regulated clients.",
-    requiredToolIds: ["ninja", "halo", "sentinelone", "veeam", "m365_bp", "proofpoint", "hudu", "blumira"],
+    requiredToolIds: ["ninja", "sentinelone", "veeam", "m365_bp", "hudu", "blumira"],
     optionalUpsellToolIds: ["sentinel", "intune", "fortinet"],
   },
   {
     id: "co_managed",
     name: "Co‑Managed IT",
     description: "A shared-responsibility baseline aligned to internal IT teams.",
-    requiredToolIds: ["cw_automate", "cw_manage", "huntress_edr", "afi", "entra", "mimecast", "itglue"],
+    requiredToolIds: ["cw_manage", "huntress_edr", "afi", "entra", "mimecast", "itglue"],
     optionalUpsellToolIds: ["blumira", "jamf", "ubiquiti"],
   },
 ];
@@ -243,14 +240,14 @@ const seedCustomers: Customer[] = [
     id: "c-northpeak",
     name: "NorthPeak Legal",
     type: "Compliance",
-    currentToolIds: ["datto_rmm", "autotask", "sentinelone", "veeam", "m365_bp", "proofpoint"],
+    currentToolIds: ["datto_rmm", "autotask", "sentinelone", "veeam", "m365_bp"],
     baselineId: "compliance_plus",
   },
   {
     id: "c-archstone",
     name: "Archstone Retail (Co‑Managed)",
     type: "Co-Managed",
-    currentToolIds: ["cw_automate", "cw_manage", "huntress", "entra", "mimecast"],
+    currentToolIds: ["cw_manage", "huntress_edr", "entra", "mimecast"],
     baselineId: "co_managed",
   },
 ];

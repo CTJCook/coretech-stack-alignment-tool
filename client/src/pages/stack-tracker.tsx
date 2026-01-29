@@ -94,6 +94,11 @@ const toolCatalog: Tool[] = [
   { id: "entra", name: "Entra ID P1", vendor: "Microsoft", categoryId: "iam" },
   { id: "duo", name: "Duo MFA", vendor: "Cisco", categoryId: "iam" },
 
+  // Device management
+  { id: "addigy", name: "Addigy (Mac Management)", vendor: "Addigy", categoryId: "mdm" },
+  { id: "ninja_mdm", name: "NinjaOne MDM", vendor: "NinjaOne", categoryId: "mdm" },
+  { id: "intune", name: "Microsoft Intune", vendor: "Microsoft", categoryId: "mdm" },
+
   // Endpoint security
   { id: "defender_endpoint", name: "Microsoft Defender for Endpoint", vendor: "Microsoft", categoryId: "endpoint" },
   { id: "sentinelone", name: "SentinelOne", vendor: "SentinelOne", categoryId: "endpoint" },
@@ -169,6 +174,9 @@ const baselines: BaselineTemplate[] = [
       "aruba_instant_on",
       "fortigate",
       "duo",
+      "addigy",
+      "ninja_mdm",
+      "intune",
       "huntress_edr",
       "huntress_siem",
       "huntress_sat",
@@ -231,7 +239,10 @@ const seedCustomers: Customer[] = [
       "ubiquiti",
       "aruba_instant_on",
       "fortigate",
-      "duo"
+      "duo",
+      "addigy",
+      "ninja_mdm",
+      "intune"
     ],
     baselineId: "msp_baseline",
   },

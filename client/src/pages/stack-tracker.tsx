@@ -10,7 +10,9 @@ import {
   Shield,
   Sparkles,
   Users,
+  Settings,
 } from "lucide-react";
+import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -447,6 +449,12 @@ export default function StackTracker() {
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <Link href="/admin">
+                  <Button variant="outline" className="rounded-xl" data-testid="button-admin-portal">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Admin Portal
+                  </Button>
+                </Link>
                 <div className="flex items-center gap-2 rounded-2xl border bg-white/60 p-2 shadow-sm dark:bg-white/5">
                   <div className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-blue-600/18 to-violet-600/10">
                     <Shield className="h-4 w-4 text-foreground" />

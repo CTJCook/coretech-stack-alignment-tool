@@ -1272,12 +1272,12 @@ export default function StackTracker() {
                     </Pill>
                   </div>
 
-                  <Tabs defaultValue={categories[0].id} className="mt-4 overflow-hidden">
-                    <div className="flex items-center gap-2">
+                  <Tabs defaultValue={categories[0].id} className="mt-4">
+                    <div className="relative">
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="icon"
-                        className="h-8 w-8 flex-shrink-0 rounded-xl"
+                        className="absolute left-0 top-1/2 z-10 h-8 w-8 -translate-y-1/2 rounded-full bg-white shadow-md"
                         onClick={() => {
                           if (categoryTabsRef.current) {
                             categoryTabsRef.current.scrollBy({ left: -150, behavior: "smooth" });
@@ -1287,28 +1287,26 @@ export default function StackTracker() {
                       >
                         <ChevronLeft className="h-4 w-4" />
                       </Button>
-                      <div className="min-w-0 flex-1 overflow-hidden">
-                        <TabsList
-                          ref={categoryTabsRef}
-                          className="w-full justify-start overflow-x-auto rounded-2xl bg-white/55 p-1 dark:bg-white/5"
-                          style={{ scrollbarWidth: "none" }}
-                        >
-                          {categories.map((c) => (
-                            <TabsTrigger
-                              key={c.id}
-                              value={c.id}
-                              className="shrink-0 rounded-xl"
-                              data-testid={`tab-${c.id}`}
-                            >
-                              {c.name}
-                            </TabsTrigger>
-                          ))}
-                        </TabsList>
-                      </div>
+                      <TabsList
+                        ref={categoryTabsRef}
+                        className="mx-10 flex justify-start overflow-x-auto rounded-2xl bg-white/55 p-1 dark:bg-white/5"
+                        style={{ scrollbarWidth: "none" }}
+                      >
+                        {categories.map((c) => (
+                          <TabsTrigger
+                            key={c.id}
+                            value={c.id}
+                            className="shrink-0 rounded-xl"
+                            data-testid={`tab-${c.id}`}
+                          >
+                            {c.name}
+                          </TabsTrigger>
+                        ))}
+                      </TabsList>
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="icon"
-                        className="h-8 w-8 flex-shrink-0 rounded-xl"
+                        className="absolute right-0 top-1/2 z-10 h-8 w-8 -translate-y-1/2 rounded-full bg-white shadow-md"
                         onClick={() => {
                           if (categoryTabsRef.current) {
                             categoryTabsRef.current.scrollBy({ left: 150, behavior: "smooth" });

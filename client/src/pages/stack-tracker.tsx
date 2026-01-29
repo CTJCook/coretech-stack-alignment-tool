@@ -2,6 +2,8 @@ import * as React from "react";
 import {
   ArrowRight,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   ClipboardCopy,
   Download,
   FileText,
@@ -1271,18 +1273,49 @@ export default function StackTracker() {
                   </div>
 
                   <Tabs defaultValue={categories[0].id} className="mt-4">
-                    <TabsList ref={categoryTabsRef} className="w-full justify-start overflow-x-auto rounded-2xl bg-white/55 p-1 dark:bg-white/5">
-                      {categories.map((c) => (
-                        <TabsTrigger
-                          key={c.id}
-                          value={c.id}
-                          className="rounded-xl"
-                          data-testid={`tab-${c.id}`}
-                        >
-                          {c.name}
-                        </TabsTrigger>
-                      ))}
-                    </TabsList>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0 rounded-xl"
+                        onClick={() => {
+                          if (categoryTabsRef.current) {
+                            categoryTabsRef.current.scrollBy({ left: -150, behavior: "smooth" });
+                          }
+                        }}
+                        data-testid="btn-scroll-tabs-left"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <TabsList
+                        ref={categoryTabsRef}
+                        className="flex-1 justify-start overflow-x-auto rounded-2xl bg-white/55 p-1 dark:bg-white/5"
+                      >
+                        {categories.map((c) => (
+                          <TabsTrigger
+                            key={c.id}
+                            value={c.id}
+                            className="shrink-0 rounded-xl"
+                            data-testid={`tab-${c.id}`}
+                          >
+                            {c.name}
+                          </TabsTrigger>
+                        ))}
+                      </TabsList>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0 rounded-xl"
+                        onClick={() => {
+                          if (categoryTabsRef.current) {
+                            categoryTabsRef.current.scrollBy({ left: 150, behavior: "smooth" });
+                          }
+                        }}
+                        data-testid="btn-scroll-tabs-right"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
 
                     {categories.map((c) => {
                       const tools = toolsByCategoryId(c.id);

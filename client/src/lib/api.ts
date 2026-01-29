@@ -1,4 +1,4 @@
-import type { Category, Tool, Baseline, Customer } from "@shared/schema";
+import type { Category, Tool, Baseline, Customer, InsertCustomer } from "@shared/schema";
 
 const API_BASE = "/api";
 
@@ -77,7 +77,7 @@ export const api = {
   customers: {
     getAll: () => fetchJSON<Customer[]>(`${API_BASE}/customers`),
     getOne: (id: string) => fetchJSON<Customer>(`${API_BASE}/customers/${id}`),
-    create: (data: Omit<Customer, "id">) =>
+    create: (data: InsertCustomer) =>
       fetchJSON<Customer>(`${API_BASE}/customers`, {
         method: "POST",
         body: JSON.stringify(data),

@@ -228,7 +228,7 @@ export default function StackTracker() {
   const [selectedCustomerId, setSelectedCustomerId] = React.useState<string>("");
   const [customerSearch, setCustomerSearch] = React.useState("");
   const [newCustomerName, setNewCustomerName] = React.useState("");
-  const [newCustomerType, setNewCustomerType] = React.useState<Customer["type"]>("SMB");
+  const [newCustomerServiceTiers, setNewCustomerServiceTiers] = React.useState<("Essentials" | "MSP" | "Break-Fix")[]>(["Essentials"]);
 
   const categories = categoriesQuery.data ?? [];
   const toolCatalog = toolsQuery.data ?? [];
@@ -291,11 +291,17 @@ export default function StackTracker() {
       return;
     }
 
+    if (newCustomerServiceTiers.length === 0) {
+      toast({
+        title: "Service tier required",
+        description: "Select at least one service tier.",
+      });
+      return;
+    }
+
     const baselineId = baselines.find((b) => {
-      if (newCustomerType === "Compliance") return b.name.includes("Compliance");
-      if (newCustomerType === "Co-Managed") return b.name.includes("Co-Managed");
-      if (newCustomerType === "MSP") return b.name.includes("MSP") || b.name.includes("Baseline");
-      return b.name.includes("SMB") || b.name.includes("Standard");
+      if (newCustomerServiceTiers.includes("MSP")) return b.name.includes("MSP") || b.name.includes("Baseline");
+      return b.name.includes("Standard") || b.name.includes("SMB");
     })?.id ?? baselines[0]?.id;
 
     if (!baselineId) {
@@ -310,7 +316,7 @@ export default function StackTracker() {
     createCustomerMutation.mutate(
       {
         name: newCustomerName.trim(),
-        type: newCustomerType,
+        serviceTiers: newCustomerServiceTiers,
         currentToolIds: [],
         baselineId,
       },
@@ -318,7 +324,7 @@ export default function StackTracker() {
         onSuccess: (customer) => {
           setSelectedCustomerId(customer.id);
           setNewCustomerName("");
-          setNewCustomerType("SMB");
+          setNewCustomerServiceTiers(["Essentials"]);
         },
       }
     );
@@ -568,8 +574,8 @@ export default function StackTracker() {
                           <div className="font-medium" data-testid="text-selected-customer-name">
                             {selectedCustomer.name}
                           </div>
-                          <div className="mt-0.5 text-xs text-muted-foreground" data-testid="text-selected-customer-type">
-                            {selectedCustomer.type} customer
+                          <div className="mt-0.5 text-xs text-muted-foreground" data-testid="text-selected-customer-tiers">
+                            {selectedCustomer.serviceTiers?.length > 0 ? selectedCustomer.serviceTiers.join(", ") : "No tiers"} 
                           </div>
                         </div>
                         <ScoreRing value={coverage.pct} testId="score-coverage" />
@@ -638,24 +644,29 @@ export default function StackTracker() {
                     </div>
 
                     <div>
-                      <Label data-testid="label-new-customer-type" className="text-xs text-muted-foreground">
-                        Customer type
+                      <Label data-testid="label-new-customer-tiers" className="text-xs text-muted-foreground">
+                        Service tiers (select all that apply)
                       </Label>
-                      <Select
-                        value={newCustomerType}
-                        onValueChange={(v) => setNewCustomerType(v as Customer["type"])}
-                        disabled={!isAdmin}
-                      >
-                        <SelectTrigger data-testid="select-new-customer-type" className="mt-1 h-10 rounded-xl">
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem data-testid="option-type-smb" value="SMB">SMB</SelectItem>
-                          <SelectItem data-testid="option-type-compliance" value="Compliance">Compliance</SelectItem>
-                          <SelectItem data-testid="option-type-comanaged" value="Co-Managed">Co‑Managed</SelectItem>
-                          <SelectItem data-testid="option-type-msp" value="MSP">MSP (internal)</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="mt-2 grid gap-2">
+                        {(["Essentials", "MSP", "Break-Fix"] as const).map((tier) => (
+                          <div key={tier} className="flex items-center gap-2">
+                            <Checkbox
+                              id={`tier-${tier}`}
+                              data-testid={`checkbox-tier-${tier}`}
+                              checked={newCustomerServiceTiers.includes(tier)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setNewCustomerServiceTiers([...newCustomerServiceTiers, tier]);
+                                } else {
+                                  setNewCustomerServiceTiers(newCustomerServiceTiers.filter((t) => t !== tier));
+                                }
+                              }}
+                              disabled={!isAdmin}
+                            />
+                            <Label htmlFor={`tier-${tier}`} className="text-sm">{tier}</Label>
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
                     <Button
@@ -758,9 +769,11 @@ export default function StackTracker() {
                             {missingToolIds.length} gap{missingToolIds.length === 1 ? "" : "s"}
                           </Pill>
                         )}
-                        <Pill tone="neutral" testId="pill-customer-type">
-                          {selectedCustomer.type}
-                        </Pill>
+                        {selectedCustomer.serviceTiers?.map((tier) => (
+                          <Pill key={tier} tone="neutral" testId={`pill-tier-${tier}`}>
+                            {tier}
+                          </Pill>
+                        ))}
                       </div>
                     </div>
 

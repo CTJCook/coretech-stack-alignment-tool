@@ -69,6 +69,11 @@ export const customers = pgTable("customers", {
 
 export const insertCustomerSchema = createInsertSchema(customers).omit({ id: true }).extend({
   serviceTiers: z.array(serviceTierEnum).min(1, "Select at least one service tier"),
+  address: z.string().nullable().optional(),
+  primaryContactName: z.string().nullable().optional(),
+  customerPhone: z.string().nullable().optional(),
+  contactPhone: z.string().nullable().optional(),
+  contactEmail: z.string().nullable().optional(),
 });
 export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
 export type Customer = typeof customers.$inferSelect;

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { Customer } from "@shared/schema";
+import type { Customer, InsertCustomer } from "@shared/schema";
 import { useToast } from "./use-toast";
 
 export function useCategories() {
@@ -52,7 +52,7 @@ export function useCreateCustomer() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (data: Omit<Customer, "id">) => api.customers.create(data),
+    mutationFn: (data: InsertCustomer) => api.customers.create(data),
     onSuccess: (customer) => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
       toast({

@@ -52,7 +52,7 @@ type BaselineTemplate = {
 type Customer = {
   id: string;
   name: string;
-  type: "SMB" | "Compliance" | "Co-Managed";
+  type: "SMB" | "Compliance" | "Co-Managed" | "MSP";
   currentToolIds: string[];
   baselineId: string;
 };
@@ -60,60 +60,132 @@ type Customer = {
 const categories: Category[] = [
   { id: "rmm", name: "RMM", description: "Monitoring, patching, remote control" },
   { id: "psa", name: "PSA", description: "Tickets, billing, agreements" },
-  { id: "av", name: "EDR / AV", description: "Endpoint detection & response" },
-  { id: "backup", name: "Backup", description: "Workstation/server + M365 backup" },
-  { id: "m365", name: "Microsoft 365", description: "Identity + productivity" },
-  { id: "email", name: "Email Security", description: "Filtering, phishing protection" },
+  { id: "deploy", name: "Deployment", description: "Provisioning, onboarding, automation" },
   { id: "mdm", name: "MDM", description: "Mobile/device management" },
+  { id: "m365", name: "Microsoft 365", description: "Identity + productivity" },
+  { id: "iam", name: "Identity & MFA", description: "SSO, conditional access, MFA" },
+  { id: "endpoint", name: "Endpoint Security", description: "EDR, hardening, privilege" },
+  { id: "email", name: "Email Security", description: "Filtering, phishing protection" },
+  { id: "web", name: "Web Filtering", description: "DNS/agent web filtering" },
+  { id: "backup", name: "Backup", description: "Server/workstation + SaaS backup" },
   { id: "network", name: "Network", description: "Firewall, Wi‑Fi, monitoring" },
+  { id: "monitoring", name: "Monitoring", description: "Cloud/network/asset visibility" },
   { id: "docs", name: "Documentation", description: "Passwords, runbooks" },
   { id: "siem", name: "SIEM", description: "Log collection + alerting" },
+  { id: "sat", name: "Security Awareness", description: "Phishing tests, training" },
+  { id: "itdr", name: "ITDR", description: "Identity threat detection" },
 ];
 
 const toolCatalog: Tool[] = [
-  { id: "ninja", name: "NinjaOne", vendor: "NinjaOne", categoryId: "rmm", tags: ["rmm"] },
+  // RMM / PSA
+  { id: "ninja", name: "NinjaOne RMM", vendor: "NinjaOne", categoryId: "rmm", tags: ["rmm"] },
   { id: "datto_rmm", name: "Datto RMM", vendor: "Kaseya", categoryId: "rmm" },
   { id: "cw_automate", name: "Automate", vendor: "ConnectWise", categoryId: "rmm" },
 
-  { id: "cw_manage", name: "Manage", vendor: "ConnectWise", categoryId: "psa" },
   { id: "halo", name: "HaloPSA", vendor: "Halo", categoryId: "psa" },
   { id: "autotask", name: "Autotask", vendor: "Kaseya", categoryId: "psa" },
+  { id: "cw_manage", name: "Manage", vendor: "ConnectWise", categoryId: "psa" },
 
-  { id: "sentinelone", name: "SentinelOne", vendor: "SentinelOne", categoryId: "av" },
-  { id: "huntress", name: "Huntress", vendor: "Huntress", categoryId: "av" },
-  { id: "crowdstrike", name: "CrowdStrike", vendor: "CrowdStrike", categoryId: "av" },
+  // Deployment
+  { id: "immybot", name: "ImmyBot", vendor: "ImmyBot", categoryId: "deploy" },
 
-  { id: "veeam", name: "Veeam", vendor: "Veeam", categoryId: "backup" },
-  { id: "datto_backup", name: "Datto BCDR", vendor: "Kaseya", categoryId: "backup" },
-  { id: "afi", name: "AFI.ai", vendor: "AFI.ai", categoryId: "backup" },
-
+  // Microsoft 365 / Identity
   { id: "m365_bp", name: "Microsoft 365 Business Premium", vendor: "Microsoft", categoryId: "m365" },
-  { id: "entra", name: "Entra ID P1", vendor: "Microsoft", categoryId: "m365" },
+  { id: "google_workspace", name: "Google Workspace", vendor: "Google", categoryId: "m365" },
 
+  { id: "entra_p2", name: "Microsoft Entra ID P2", vendor: "Microsoft", categoryId: "iam" },
+  { id: "entra", name: "Entra ID P1", vendor: "Microsoft", categoryId: "iam" },
+  { id: "duo", name: "Duo MFA", vendor: "Cisco", categoryId: "iam" },
+
+  // Endpoint security
+  { id: "defender_endpoint", name: "Microsoft Defender for Endpoint", vendor: "Microsoft", categoryId: "endpoint" },
+  { id: "sentinelone", name: "SentinelOne", vendor: "SentinelOne", categoryId: "endpoint" },
+  { id: "huntress_edr", name: "Huntress EDR", vendor: "Huntress", categoryId: "endpoint" },
+
+  // Email security
+  { id: "defender_exchange", name: "Microsoft Defender for Exchange", vendor: "Microsoft", categoryId: "email" },
   { id: "abnormal", name: "Abnormal", vendor: "Abnormal", categoryId: "email" },
   { id: "proofpoint", name: "Proofpoint", vendor: "Proofpoint", categoryId: "email" },
   { id: "mimecast", name: "Mimecast", vendor: "Mimecast", categoryId: "email" },
 
-  { id: "intune", name: "Intune", vendor: "Microsoft", categoryId: "mdm" },
-  { id: "jamf", name: "Jamf", vendor: "Jamf", categoryId: "mdm" },
+  // Web filtering
+  { id: "zorus", name: "Zorus Web Filtering", vendor: "Zorus", categoryId: "web" },
 
-  { id: "meraki", name: "Meraki Firewall", vendor: "Cisco", categoryId: "network" },
+  // Backup
+  { id: "dropsuite", name: "Dropsuite Backup", vendor: "Dropsuite", categoryId: "backup" },
+  { id: "axcient", name: "Axcient Backup", vendor: "Axcient", categoryId: "backup" },
+  { id: "datto_backup", name: "Datto Backup", vendor: "Kaseya", categoryId: "backup" },
+  { id: "veeam", name: "Veeam", vendor: "Veeam", categoryId: "backup" },
+  { id: "afi", name: "AFI.ai", vendor: "AFI.ai", categoryId: "backup" },
+
+  // Network
+  { id: "fortigate", name: "FortiGate Firewall", vendor: "Fortinet", categoryId: "network" },
   { id: "fortinet", name: "Fortinet", vendor: "Fortinet", categoryId: "network" },
-  { id: "ubiquiti", name: "UniFi", vendor: "Ubiquiti", categoryId: "network" },
+  { id: "ubiquiti", name: "Ubiquiti / UniFi", vendor: "Ubiquiti", categoryId: "network" },
+  { id: "aruba_instant_on", name: "Aruba Instant On", vendor: "HPE Aruba", categoryId: "network" },
+  { id: "meraki", name: "Meraki Firewall", vendor: "Cisco", categoryId: "network" },
 
-  { id: "hudu", name: "Hudu", vendor: "Hudu", categoryId: "docs" },
+  // Monitoring / Visibility
+  { id: "havoc", name: "Havoc Network Monitoring", vendor: "Havoc", categoryId: "monitoring" },
+  { id: "liongard", name: "Liongard", vendor: "Liongard", categoryId: "monitoring" },
+
+  // Documentation / Credentials / Privilege
+  { id: "hudu", name: "HUDU", vendor: "Hudu", categoryId: "docs" },
+  { id: "passwordboss", name: "CyberFox PasswordBoss", vendor: "CyberFox", categoryId: "docs" },
   { id: "itglue", name: "IT Glue", vendor: "Kaseya", categoryId: "docs" },
+  { id: "autoelevate", name: "CyberFox AutoElevate", vendor: "CyberFox", categoryId: "endpoint" },
 
+  // SIEM / Awareness / ITDR
+  { id: "huntress_siem", name: "Huntress SIEM", vendor: "Huntress", categoryId: "siem" },
   { id: "blumira", name: "Blumira", vendor: "Blumira", categoryId: "siem" },
   { id: "sentinel", name: "Microsoft Sentinel", vendor: "Microsoft", categoryId: "siem" },
+
+  { id: "huntress_sat", name: "Huntress SAT", vendor: "Huntress", categoryId: "sat" },
+  { id: "huntress_itdr", name: "Huntress ITDR", vendor: "Huntress", categoryId: "itdr" },
+
+  // Other\n  { id: "cip_registered", name: "Registered in CIP", vendor: "(internal) ", categoryId: "docs" },
+  { id: "cipp", name: "CIPP (Microsoft Tenant Management)", vendor: "CIPP", categoryId: "m365" },
 ];
 
 const baselines: BaselineTemplate[] = [
   {
+    id: "msp_baseline",
+    name: "MSP Baseline (Modern M365 + Huntress)",
+    description: "Baseline aligned to a modern MSP stack: RMM + deployment, M365 identity, endpoint + email protections, backups, and visibility.",
+    requiredToolIds: [
+      "hudu",
+      "ninja",
+      "immybot",
+      "cipp",
+      "m365_bp",
+      "entra_p2",
+      "defender_endpoint",
+      "defender_exchange",
+      "autoelevate",
+      "passwordboss",
+      "zorus",
+      "dropsuite",
+      "axcient",
+      "datto_backup",
+      "havoc",
+      "liongard",
+      "ubiquiti",
+      "aruba_instant_on",
+      "fortigate",
+      "duo",
+      "huntress_edr",
+      "huntress_siem",
+      "huntress_sat",
+      "huntress_itdr",
+      "cip_registered"
+    ],
+    optionalUpsellToolIds: ["sentinel", "blumira"],
+  },
+  {
     id: "smb_standard",
     name: "SMB Standard",
     description: "A pragmatic baseline for small-to-mid businesses.",
-    requiredToolIds: ["ninja", "halo", "huntress", "afi", "m365_bp", "abnormal", "hudu"],
+    requiredToolIds: ["ninja", "halo", "huntress_edr", "afi", "m365_bp", "abnormal", "hudu"],
     optionalUpsellToolIds: ["blumira", "intune", "meraki"],
   },
   {
@@ -127,18 +199,45 @@ const baselines: BaselineTemplate[] = [
     id: "co_managed",
     name: "Co‑Managed IT",
     description: "A shared-responsibility baseline aligned to internal IT teams.",
-    requiredToolIds: ["cw_automate", "cw_manage", "huntress", "afi", "entra", "mimecast", "itglue"],
+    requiredToolIds: ["cw_automate", "cw_manage", "huntress_edr", "afi", "entra", "mimecast", "itglue"],
     optionalUpsellToolIds: ["blumira", "jamf", "ubiquiti"],
   },
 ];
 
 const seedCustomers: Customer[] = [
   {
-    id: "c-woodline",
-    name: "Woodline Manufacturing",
-    type: "SMB",
-    currentToolIds: ["ninja", "huntress", "m365_bp", "hudu"],
-    baselineId: "smb_standard",
+    id: "c-msp-internal",
+    name: "MSP Internal Stack",
+    type: "MSP",
+    currentToolIds: [
+      "hudu",
+      "ninja",
+      "immybot",
+      "cip_registered",
+      "cipp",
+      "m365_bp",
+      "entra_p2",
+      "defender_endpoint",
+      "defender_exchange",
+      "autoelevate",
+      "passwordboss",
+      "zorus",
+      "huntress_edr",
+      "huntress_siem",
+      "huntress_sat",
+      "huntress_itdr",
+      "google_workspace",
+      "dropsuite",
+      "axcient",
+      "datto_backup",
+      "havoc",
+      "liongard",
+      "ubiquiti",
+      "aruba_instant_on",
+      "fortigate",
+      "duo"
+    ],
+    baselineId: "msp_baseline",
   },
   {
     id: "c-northpeak",
@@ -399,7 +498,9 @@ export default function StackTracker() {
         ? "compliance_plus"
         : newCustomerType === "Co-Managed"
           ? "co_managed"
-          : "smb_standard";
+          : newCustomerType === "MSP"
+            ? "msp_baseline"
+            : "smb_standard";
 
     const customer: Customer = {
       id,
@@ -688,6 +789,7 @@ export default function StackTracker() {
                           <SelectItem data-testid="option-type-smb" value="SMB">SMB</SelectItem>
                           <SelectItem data-testid="option-type-compliance" value="Compliance">Compliance</SelectItem>
                           <SelectItem data-testid="option-type-comanaged" value="Co-Managed">Co‑Managed</SelectItem>
+                          <SelectItem data-testid="option-type-msp" value="MSP">MSP (internal)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

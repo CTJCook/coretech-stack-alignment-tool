@@ -1255,7 +1255,7 @@ export default function StackTracker() {
                   </Card>
                 </motion.div>
 
-                <Card className="glass noise relative rounded-3xl p-5">
+                <Card className="glass noise relative overflow-hidden rounded-3xl p-5">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <div className="text-sm font-medium" data-testid="text-stack-editor-title">
@@ -1272,7 +1272,7 @@ export default function StackTracker() {
                     </Pill>
                   </div>
 
-                  <Tabs defaultValue={categories[0].id} className="mt-4">
+                  <Tabs defaultValue={categories[0].id} className="mt-4 overflow-hidden">
                     <div className="flex items-center gap-2">
                       <Button
                         variant="ghost"

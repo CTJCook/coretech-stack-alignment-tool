@@ -81,7 +81,6 @@ const toolCatalog: Tool[] = [
   { id: "ninja", name: "NinjaOne RMM", vendor: "NinjaOne", categoryId: "rmm", tags: ["rmm"] },
   { id: "datto_rmm", name: "Datto RMM", vendor: "Kaseya", categoryId: "rmm" },
 
-  { id: "autotask", name: "Autotask", vendor: "Kaseya", categoryId: "psa" },
   { id: "cw_manage", name: "Manage", vendor: "ConnectWise", categoryId: "psa" },
 
   // Deployment
@@ -240,7 +239,7 @@ const seedCustomers: Customer[] = [
     id: "c-northpeak",
     name: "NorthPeak Legal",
     type: "Compliance",
-    currentToolIds: ["datto_rmm", "autotask", "sentinelone", "veeam", "m365_bp"],
+    currentToolIds: ["datto_rmm", "sentinelone", "veeam", "m365_bp"],
     baselineId: "compliance_plus",
   },
   {

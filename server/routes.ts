@@ -255,6 +255,12 @@ export async function registerRoutes(
         return res.status(400).json({ error: "No baseline available. Please create a baseline first." });
       }
 
+      // Helper to safely convert any value to trimmed string or null
+      const toStr = (v: any): string | null => {
+        if (v == null || v === "") return null;
+        return String(v).trim() || null;
+      };
+
       const validTiers = ["Essentials", "MSP", "Break-Fix"] as const;
       const results = {
         imported: 0,
@@ -268,16 +274,17 @@ export async function registerRoutes(
         const rowNum = i + 1;
 
         // Validate required fields
-        if (!row.name || typeof row.name !== "string" || !row.name.trim()) {
+        const customerName = toStr(row.name);
+        if (!customerName) {
           results.errors.push({ row: rowNum, error: "Customer name is required" });
           continue;
         }
 
         // Parse service tiers
         let serviceTiers: ("Essentials" | "MSP" | "Break-Fix")[] = ["Essentials"];
-        if (row.serviceTiers) {
-          const tierString = String(row.serviceTiers);
-          const parsed = tierString.split(/[,;|]/).map(t => t.trim()).filter(Boolean);
+        const tierValue = toStr(row.serviceTiers);
+        if (tierValue) {
+          const parsed = tierValue.split(/[,;|]/).map(t => t.trim()).filter(Boolean);
           const validParsed = parsed.filter(t => validTiers.includes(t as any)) as ("Essentials" | "MSP" | "Break-Fix")[];
           if (validParsed.length > 0) {
             serviceTiers = validParsed;
@@ -286,9 +293,10 @@ export async function registerRoutes(
 
         // Find matching baseline
         let baselineId = defaultBaseline.id;
-        if (row.baseline) {
+        const baselineValue = toStr(row.baseline);
+        if (baselineValue) {
           const matchedBaseline = allBaselines.find(b => 
-            b.name.toLowerCase().includes(String(row.baseline).toLowerCase())
+            b.name.toLowerCase().includes(baselineValue.toLowerCase())
           );
           if (matchedBaseline) {
             baselineId = matchedBaseline.id;
@@ -296,12 +304,12 @@ export async function registerRoutes(
         }
 
         validCustomers.push({
-          name: row.name.trim(),
-          address: row.address?.trim() || null,
-          primaryContactName: row.primaryContactName?.trim() || row.contactName?.trim() || null,
-          customerPhone: row.customerPhone?.trim() || row.phone?.trim() || null,
-          contactPhone: row.contactPhone?.trim() || null,
-          contactEmail: row.contactEmail?.trim() || row.email?.trim() || null,
+          name: customerName,
+          address: toStr(row.address),
+          primaryContactName: toStr(row.primaryContactName) || toStr(row.contactName),
+          customerPhone: toStr(row.customerPhone) || toStr(row.phone),
+          contactPhone: toStr(row.contactPhone),
+          contactEmail: toStr(row.contactEmail) || toStr(row.email),
           serviceTiers,
           currentToolIds: [],
           baselineId,
@@ -354,6 +362,11 @@ export async function registerRoutes(
       const headers = jsonData[0].map((h: any) => String(h || "").trim());
       const rows = jsonData.slice(1).filter(row => row.some(cell => cell !== undefined && cell !== ""));
 
+      // Check for usable headers
+      if (headers.length === 0 || headers.every(h => !h)) {
+        return res.status(400).json({ error: "No valid column headers found in file" });
+      }
+
       // Map headers to our expected fields
       const columnMapping: Record<string, string> = {};
       
@@ -391,6 +404,14 @@ export async function registerRoutes(
         });
         return obj;
       });
+
+      // Check if we have any meaningful column mappings (at minimum need 'name')
+      const hasNameColumn = Object.values(columnMapping).includes("name");
+      if (!hasNameColumn) {
+        return res.status(400).json({ 
+          error: "Could not find a 'name' or 'company' column. Please ensure your file has a column for customer names." 
+        });
+      }
 
       res.json({
         headers,

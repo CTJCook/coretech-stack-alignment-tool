@@ -52,18 +52,23 @@ export const insertBaselineSchema = createInsertSchema(baselines).omit({ id: tru
 export type InsertBaseline = z.infer<typeof insertBaselineSchema>;
 export type Baseline = typeof baselines.$inferSelect;
 
-export const customerTypeEnum = z.enum(["SMB", "Compliance", "Co-Managed", "MSP"]);
+export const serviceTierEnum = z.enum(["Essentials", "MSP", "Break-Fix"]);
 
 export const customers = pgTable("customers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
-  type: text("type").notNull(),
+  address: text("address"),
+  primaryContactName: text("primary_contact_name"),
+  customerPhone: text("customer_phone"),
+  contactPhone: text("contact_phone"),
+  contactEmail: text("contact_email"),
+  serviceTiers: text("service_tiers").array().notNull().default(sql`ARRAY[]::text[]`),
   currentToolIds: text("current_tool_ids").array().notNull().default(sql`ARRAY[]::text[]`),
   baselineId: varchar("baseline_id").notNull().references(() => baselines.id, { onDelete: "restrict" }),
 });
 
 export const insertCustomerSchema = createInsertSchema(customers).omit({ id: true }).extend({
-  type: customerTypeEnum,
+  serviceTiers: z.array(serviceTierEnum).min(1, "Select at least one service tier"),
 });
 export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
 export type Customer = typeof customers.$inferSelect;

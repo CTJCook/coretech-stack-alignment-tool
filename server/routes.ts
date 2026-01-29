@@ -1,8 +1,9 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertCategorySchema, insertToolSchema, insertBaselineSchema, insertCustomerSchema } from "@shared/schema";
+import { insertCategorySchema, insertToolSchema, insertBaselineSchema, insertCustomerSchema, serviceTierEnum } from "@shared/schema";
 import { z } from "zod";
+import * as XLSX from "xlsx";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -234,6 +235,166 @@ export async function registerRoutes(
       }
     } catch (error) {
       res.status(500).json({ error: "Failed to delete customer" });
+    }
+  });
+
+  // Bulk Import Customers API
+  app.post("/api/customers/import", async (req, res) => {
+    try {
+      const { data } = req.body;
+      
+      if (!data || !Array.isArray(data)) {
+        return res.status(400).json({ error: "Invalid data format. Expected array of customer records." });
+      }
+
+      // Get default baseline
+      const allBaselines = await storage.getAllBaselines();
+      const defaultBaseline = allBaselines.find(b => b.name.includes("Standard") || b.name.includes("SMB")) || allBaselines[0];
+      
+      if (!defaultBaseline) {
+        return res.status(400).json({ error: "No baseline available. Please create a baseline first." });
+      }
+
+      const validTiers = ["Essentials", "MSP", "Break-Fix"] as const;
+      const results = {
+        imported: 0,
+        errors: [] as { row: number; error: string }[],
+      };
+
+      const validCustomers: any[] = [];
+
+      for (let i = 0; i < data.length; i++) {
+        const row = data[i];
+        const rowNum = i + 1;
+
+        // Validate required fields
+        if (!row.name || typeof row.name !== "string" || !row.name.trim()) {
+          results.errors.push({ row: rowNum, error: "Customer name is required" });
+          continue;
+        }
+
+        // Parse service tiers
+        let serviceTiers: ("Essentials" | "MSP" | "Break-Fix")[] = ["Essentials"];
+        if (row.serviceTiers) {
+          const tierString = String(row.serviceTiers);
+          const parsed = tierString.split(/[,;|]/).map(t => t.trim()).filter(Boolean);
+          const validParsed = parsed.filter(t => validTiers.includes(t as any)) as ("Essentials" | "MSP" | "Break-Fix")[];
+          if (validParsed.length > 0) {
+            serviceTiers = validParsed;
+          }
+        }
+
+        // Find matching baseline
+        let baselineId = defaultBaseline.id;
+        if (row.baseline) {
+          const matchedBaseline = allBaselines.find(b => 
+            b.name.toLowerCase().includes(String(row.baseline).toLowerCase())
+          );
+          if (matchedBaseline) {
+            baselineId = matchedBaseline.id;
+          }
+        }
+
+        validCustomers.push({
+          name: row.name.trim(),
+          address: row.address?.trim() || null,
+          primaryContactName: row.primaryContactName?.trim() || row.contactName?.trim() || null,
+          customerPhone: row.customerPhone?.trim() || row.phone?.trim() || null,
+          contactPhone: row.contactPhone?.trim() || null,
+          contactEmail: row.contactEmail?.trim() || row.email?.trim() || null,
+          serviceTiers,
+          currentToolIds: [],
+          baselineId,
+        });
+      }
+
+      // Bulk insert valid customers
+      if (validCustomers.length > 0) {
+        const created = await storage.createManyCustomers(validCustomers);
+        results.imported = created.length;
+      }
+
+      res.json({
+        success: true,
+        imported: results.imported,
+        errors: results.errors,
+        total: data.length,
+      });
+    } catch (error) {
+      console.error("Import error:", error);
+      res.status(500).json({ error: "Failed to import customers" });
+    }
+  });
+
+  // Parse Excel/CSV file upload
+  app.post("/api/customers/parse-file", async (req, res) => {
+    try {
+      const { fileData, fileName } = req.body;
+      
+      if (!fileData) {
+        return res.status(400).json({ error: "No file data provided" });
+      }
+
+      // Parse base64 file data
+      const buffer = Buffer.from(fileData, "base64");
+      const workbook = XLSX.read(buffer, { type: "buffer" });
+      
+      // Get first sheet
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      
+      // Convert to JSON
+      const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
+      
+      if (jsonData.length === 0) {
+        return res.status(400).json({ error: "Empty file" });
+      }
+
+      // First row is headers
+      const headers = jsonData[0].map((h: any) => String(h || "").trim());
+      const rows = jsonData.slice(1).filter(row => row.some(cell => cell !== undefined && cell !== ""));
+
+      // Map headers to our expected fields
+      const columnMapping: Record<string, string> = {};
+      const expectedFields = ["name", "address", "primaryContactName", "contactName", "customerPhone", "phone", "contactPhone", "contactEmail", "email", "serviceTiers", "baseline"];
+      
+      headers.forEach((header, index) => {
+        const normalized = header.toLowerCase().replace(/[_\s-]/g, "");
+        for (const field of expectedFields) {
+          if (normalized.includes(field.toLowerCase()) || field.toLowerCase().includes(normalized)) {
+            columnMapping[header] = field;
+            break;
+          }
+        }
+        // Fallback mappings
+        if (!columnMapping[header]) {
+          if (normalized.includes("company") || normalized === "customer") columnMapping[header] = "name";
+          else if (normalized.includes("contact") && normalized.includes("name")) columnMapping[header] = "primaryContactName";
+          else if (normalized.includes("tier") || normalized.includes("bundle") || normalized.includes("service")) columnMapping[header] = "serviceTiers";
+        }
+      });
+
+      // Convert rows to objects
+      const data = rows.map(row => {
+        const obj: Record<string, any> = {};
+        headers.forEach((header, index) => {
+          const field = columnMapping[header] || header;
+          if (row[index] !== undefined && row[index] !== "") {
+            obj[field] = row[index];
+          }
+        });
+        return obj;
+      });
+
+      res.json({
+        headers,
+        columnMapping,
+        data,
+        rowCount: data.length,
+      });
+    } catch (error) {
+      console.error("Parse file error:", error);
+      res.status(500).json({ error: "Failed to parse file" });
     }
   });
 

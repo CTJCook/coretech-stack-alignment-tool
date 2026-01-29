@@ -1273,50 +1273,22 @@ export default function StackTracker() {
                   </div>
 
                   <Tabs defaultValue={categories[0].id} className="mt-4">
-                    <div className="relative">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="absolute left-0 top-1/2 z-10 h-8 w-8 -translate-y-1/2 rounded-full bg-white shadow-md"
-                        onClick={() => {
-                          if (categoryTabsRef.current) {
-                            categoryTabsRef.current.scrollBy({ left: -150, behavior: "smooth" });
-                          }
-                        }}
-                        data-testid="btn-scroll-tabs-left"
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      <TabsList
-                        ref={categoryTabsRef}
-                        className="mx-10 flex justify-start overflow-x-auto rounded-2xl bg-white/55 p-1 dark:bg-white/5"
-                        style={{ scrollbarWidth: "none" }}
-                      >
-                        {categories.map((c) => (
-                          <TabsTrigger
-                            key={c.id}
-                            value={c.id}
-                            className="shrink-0 rounded-xl"
-                            data-testid={`tab-${c.id}`}
-                          >
-                            {c.name}
-                          </TabsTrigger>
-                        ))}
-                      </TabsList>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="absolute right-0 top-1/2 z-10 h-8 w-8 -translate-y-1/2 rounded-full bg-white shadow-md"
-                        onClick={() => {
-                          if (categoryTabsRef.current) {
-                            categoryTabsRef.current.scrollBy({ left: 150, behavior: "smooth" });
-                          }
-                        }}
-                        data-testid="btn-scroll-tabs-right"
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <TabsList
+                      ref={categoryTabsRef}
+                      className="flex w-full justify-start gap-1 overflow-x-auto rounded-2xl bg-white/55 p-1 dark:bg-white/5"
+                      style={{ scrollbarWidth: "thin" }}
+                    >
+                      {categories.map((c) => (
+                        <TabsTrigger
+                          key={c.id}
+                          value={c.id}
+                          className="shrink-0 rounded-xl"
+                          data-testid={`tab-${c.id}`}
+                        >
+                          {c.name}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
 
                     {categories.map((c) => {
                       const tools = toolsByCategoryId(c.id);

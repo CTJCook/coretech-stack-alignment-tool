@@ -1277,7 +1277,7 @@ export default function StackTracker() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 shrink-0 rounded-xl"
+                        className="h-8 w-8 flex-shrink-0 rounded-xl"
                         onClick={() => {
                           if (categoryTabsRef.current) {
                             categoryTabsRef.current.scrollBy({ left: -150, behavior: "smooth" });
@@ -1287,25 +1287,28 @@ export default function StackTracker() {
                       >
                         <ChevronLeft className="h-4 w-4" />
                       </Button>
-                      <TabsList
-                        ref={categoryTabsRef}
-                        className="flex-1 justify-start overflow-x-auto rounded-2xl bg-white/55 p-1 dark:bg-white/5"
-                      >
-                        {categories.map((c) => (
-                          <TabsTrigger
-                            key={c.id}
-                            value={c.id}
-                            className="shrink-0 rounded-xl"
-                            data-testid={`tab-${c.id}`}
-                          >
-                            {c.name}
-                          </TabsTrigger>
-                        ))}
-                      </TabsList>
+                      <div className="min-w-0 flex-1 overflow-hidden">
+                        <TabsList
+                          ref={categoryTabsRef}
+                          className="w-full justify-start overflow-x-auto rounded-2xl bg-white/55 p-1 dark:bg-white/5"
+                          style={{ scrollbarWidth: "none" }}
+                        >
+                          {categories.map((c) => (
+                            <TabsTrigger
+                              key={c.id}
+                              value={c.id}
+                              className="shrink-0 rounded-xl"
+                              data-testid={`tab-${c.id}`}
+                            >
+                              {c.name}
+                            </TabsTrigger>
+                          ))}
+                        </TabsList>
+                      </div>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 shrink-0 rounded-xl"
+                        className="h-8 w-8 flex-shrink-0 rounded-xl"
                         onClick={() => {
                           if (categoryTabsRef.current) {
                             categoryTabsRef.current.scrollBy({ left: 150, behavior: "smooth" });

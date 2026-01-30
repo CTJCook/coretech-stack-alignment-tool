@@ -510,7 +510,8 @@ export async function registerRoutes(
       const types = await client.getCompanyTypes();
       res.json(types);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch company types" });
+      console.error("Failed to fetch company types:", error);
+      res.status(500).json({ error: error instanceof Error ? error.message : "Failed to fetch company types" });
     }
   });
 

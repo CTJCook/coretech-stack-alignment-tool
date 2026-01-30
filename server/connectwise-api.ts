@@ -126,7 +126,7 @@ export class ConnectwiseApiClient {
   }
 
   async getCompanyTypes(): Promise<Array<{ id: number; name: string }>> {
-    return this.makeRequest<Array<{ id: number; name: string }>>('/company/companies/types');
+    return this.makeRequest<Array<{ id: number; name: string }>>('/company/companyTypes');
   }
 
   async getCompanies(options: {

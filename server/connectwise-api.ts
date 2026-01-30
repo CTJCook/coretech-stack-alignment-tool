@@ -65,7 +65,11 @@ export class ConnectwiseApiClient {
 
   constructor(credentials: ConnectwiseCredentials) {
     this.credentials = credentials;
-    this.baseUrl = `https://${credentials.siteUrl}/v4_6_release/apis/3.0`;
+    let siteUrl = credentials.siteUrl.replace(/\/$/, '');
+    if (!siteUrl.startsWith('https://') && !siteUrl.startsWith('http://')) {
+      siteUrl = `https://${siteUrl}`;
+    }
+    this.baseUrl = `${siteUrl}/v4_6_release/apis/3.0`;
   }
 
   private getAuthHeader(): string {

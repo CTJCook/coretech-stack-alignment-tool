@@ -1,6 +1,7 @@
 import * as React from "react";
 import {
   ArrowRight,
+  BarChart3,
   CheckCircle2,
   ClipboardCopy,
   Download,
@@ -704,6 +705,12 @@ export default function StackTracker() {
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <Link href="/dashboard">
+                  <Button variant="default" className="rounded-xl" data-testid="button-dashboard">
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    Dashboard
+                  </Button>
+                </Link>
                 <Link href="/admin">
                   <Button variant="outline" className="rounded-xl" data-testid="button-admin-portal">
                     <Settings className="mr-2 h-4 w-4" />

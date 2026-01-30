@@ -6,12 +6,14 @@ import { queryClient } from "./lib/queryClient";
 import NotFound from "@/pages/not-found";
 import StackTracker from "./pages/stack-tracker";
 import AdminPortal from "./pages/admin-portal";
+import Dashboard from "./pages/dashboard";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={StackTracker} />
       <Route path="/admin" component={AdminPortal} />
+      <Route path="/dashboard" component={Dashboard} />
       <Route component={NotFound} />
     </Switch>
   );

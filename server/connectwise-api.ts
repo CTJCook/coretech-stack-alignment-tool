@@ -126,7 +126,26 @@ export class ConnectwiseApiClient {
   }
 
   async getCompanyTypes(): Promise<Array<{ id: number; name: string }>> {
-    return this.makeRequest<Array<{ id: number; name: string }>>('/company/companies/types');
+    try {
+      return await this.makeRequest<Array<{ id: number; name: string }>>('/company/companies/types');
+    } catch (error) {
+      // Fallback: extract unique types from companies if setup tables access is denied
+      if (error instanceof Error && error.message.includes('403')) {
+        const companies = await this.makeRequest<CWCompany[]>('/company/companies', {
+          params: { pageSize: '500' }
+        });
+        const typesMap = new Map<number, string>();
+        for (const company of companies) {
+          if (company.types) {
+            for (const type of company.types) {
+              typesMap.set(type.id, type.name);
+            }
+          }
+        }
+        return Array.from(typesMap.entries()).map(([id, name]) => ({ id, name }));
+      }
+      throw error;
+    }
   }
 
   async getCompanies(options: {

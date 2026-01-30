@@ -3,6 +3,8 @@ import {
   ArrowLeft,
   Check,
   Cloud,
+  Download,
+  Eye,
   Link2,
   Loader2,
   Play,
@@ -25,7 +27,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useBaselines, useTools } from "@/hooks/use-stack-data";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api, type PreviewCompany } from "@/lib/api";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { ConnectwiseTypeMapping, ConnectwiseSkuMapping } from "@shared/schema";
 
@@ -78,6 +80,10 @@ export default function ConnectwiseAdmin() {
 
   const [syncing, setSyncing] = React.useState(false);
   const [syncResult, setSyncResult] = React.useState<any>(null);
+  
+  const [previewCompanies, setPreviewCompanies] = React.useState<PreviewCompany[]>([]);
+  const [loadingPreview, setLoadingPreview] = React.useState(false);
+  const [importingCompanyId, setImportingCompanyId] = React.useState<number | null>(null);
   const [cwCompanyTypes, setCwCompanyTypes] = React.useState<Array<{ id: number; name: string }>>([]);
   const [loadingCwTypes, setLoadingCwTypes] = React.useState(false);
 
@@ -370,6 +376,10 @@ export default function ConnectwiseAdmin() {
               <TabsTrigger value="sku-mappings" data-testid="tab-sku-mappings">
                 <Link2 className="mr-2 h-4 w-4" />
                 SKU Mappings
+              </TabsTrigger>
+              <TabsTrigger value="preview-import" data-testid="tab-preview-import" disabled={!settings?.enabled}>
+                <Eye className="mr-2 h-4 w-4" />
+                Preview & Import
               </TabsTrigger>
             </TabsList>
 
@@ -724,6 +734,128 @@ export default function ConnectwiseAdmin() {
                     })
                   )}
                 </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="preview-import" className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-medium">Preview & Import Companies</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Preview companies that match your type mappings and selectively import them one at a time.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={async () => {
+                      setLoadingPreview(true);
+                      try {
+                        const companies = await api.connectwise.previewCompanies();
+                        setPreviewCompanies(companies);
+                      } catch (error) {
+                        toast({ title: "Failed to load companies", description: String(error), variant: "destructive" });
+                      } finally {
+                        setLoadingPreview(false);
+                      }
+                    }}
+                    disabled={loadingPreview}
+                    data-testid="button-preview-companies"
+                  >
+                    {loadingPreview ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                    )}
+                    {loadingPreview ? "Loading..." : "Load Companies"}
+                  </Button>
+                </div>
+
+                {previewCompanies.length > 0 && (
+                  <div className="rounded-lg border">
+                    <div className="grid grid-cols-[1fr_1fr_1fr_120px] gap-4 border-b bg-muted/50 p-3 text-sm font-medium">
+                      <div>Company Name</div>
+                      <div>Type / Baseline</div>
+                      <div>Contact</div>
+                      <div className="text-center">Action</div>
+                    </div>
+                    <div className="max-h-[500px] overflow-auto">
+                      {previewCompanies.map((company) => (
+                        <div
+                          key={company.cwCompanyId}
+                          className="grid grid-cols-[1fr_1fr_1fr_120px] gap-4 border-b p-3 text-sm last:border-b-0"
+                          data-testid={`preview-company-${company.cwCompanyId}`}
+                        >
+                          <div>
+                            <div className="font-medium">{company.name}</div>
+                            {company.address && (
+                              <div className="text-xs text-muted-foreground">{company.address}</div>
+                            )}
+                          </div>
+                          <div>
+                            <Badge variant="outline">{company.typeName}</Badge>
+                            {company.matchingBaseline && (
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                → {company.matchingBaseline}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            {company.contactName && <div>{company.contactName}</div>}
+                            {company.phone && (
+                              <div className="text-xs text-muted-foreground">{company.phone}</div>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-center">
+                            {company.alreadyImported ? (
+                              <Badge variant="secondary" className="gap-1">
+                                <Check className="h-3 w-3" />
+                                Imported
+                              </Badge>
+                            ) : (
+                              <Button
+                                size="sm"
+                                onClick={async () => {
+                                  setImportingCompanyId(company.cwCompanyId);
+                                  try {
+                                    const result = await api.connectwise.importCompany(company.cwCompanyId);
+                                    toast({ title: "Success", description: result.message });
+                                    setPreviewCompanies((prev) =>
+                                      prev.map((c) =>
+                                        c.cwCompanyId === company.cwCompanyId
+                                          ? { ...c, alreadyImported: true }
+                                          : c
+                                      )
+                                    );
+                                    queryClient.invalidateQueries({ queryKey: ["customers"] });
+                                  } catch (error) {
+                                    toast({ title: "Import failed", description: String(error), variant: "destructive" });
+                                  } finally {
+                                    setImportingCompanyId(null);
+                                  }
+                                }}
+                                disabled={importingCompanyId === company.cwCompanyId}
+                                data-testid={`button-import-${company.cwCompanyId}`}
+                              >
+                                {importingCompanyId === company.cwCompanyId ? (
+                                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                ) : (
+                                  <Download className="mr-1 h-3 w-3" />
+                                )}
+                                Import
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {previewCompanies.length === 0 && !loadingPreview && (
+                  <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
+                    Click "Load Companies" to preview companies from ConnectWise that match your type mappings.
+                  </div>
+                )}
               </div>
             </TabsContent>
           </Tabs>

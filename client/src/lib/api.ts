@@ -195,5 +195,22 @@ export const api = {
 
     runSync: () => fetchJSON<SyncResult>(`${API_BASE}/connectwise/sync`, { method: "POST" }),
     getSyncProgress: () => fetchJSON<SyncProgress | null>(`${API_BASE}/connectwise/sync-progress`),
+    previewCompanies: () => fetchJSON<PreviewCompany[]>(`${API_BASE}/connectwise/preview-companies`),
+    importCompany: (cwCompanyId: number) =>
+      fetchJSON<{ success: boolean; message: string; customerId?: string }>(`${API_BASE}/connectwise/import-company`, {
+        method: "POST",
+        body: JSON.stringify({ cwCompanyId }),
+      }),
   },
 };
+
+export interface PreviewCompany {
+  cwCompanyId: number;
+  name: string;
+  typeName: string;
+  address: string | null;
+  phone: string | null;
+  contactName: string | null;
+  alreadyImported: boolean;
+  matchingBaseline: string | null;
+}

@@ -294,3 +294,214 @@ export async function runConnectwiseSync(): Promise<SyncResult> {
     };
   }
 }
+
+export interface PreviewCompany {
+  cwCompanyId: number;
+  name: string;
+  typeName: string;
+  address: string | null;
+  phone: string | null;
+  contactName: string | null;
+  alreadyImported: boolean;
+  matchingBaseline: string | null;
+}
+
+export async function previewConnectwiseCompanies(): Promise<PreviewCompany[]> {
+  const settings = await storage.getConnectwiseSettings();
+  if (!settings) {
+    throw new Error("ConnectWise settings not configured");
+  }
+
+  if (!settings.enabled) {
+    throw new Error("ConnectWise integration is not enabled");
+  }
+
+  const client = createConnectwiseClient({
+    companyId: settings.companyId,
+    publicKey: settings.publicKey,
+    privateKey: settings.privateKey,
+    siteUrl: settings.siteUrl,
+    clientId: settings.clientId,
+  });
+
+  const typeMappings = await storage.getAllTypeMappings();
+  const baselines = await storage.getAllBaselines();
+  const importableTypes = typeMappings.filter(m => m.shouldImport).map(m => m.cwTypeName);
+
+  if (importableTypes.length === 0) {
+    throw new Error("No company types configured for import. Please set up type mappings first.");
+  }
+
+  const companies = await client.getAllCompaniesWithPagination();
+  const previewList: PreviewCompany[] = [];
+
+  for (const company of companies) {
+    const companyTypes = company.types?.map(t => t.name) || [];
+    const matchingType = companyTypes.find(t => importableTypes.includes(t));
+
+    if (!matchingType) {
+      continue;
+    }
+
+    const typeMapping = typeMappings.find(m => m.cwTypeName === matchingType);
+    const baseline = typeMapping?.baselineId 
+      ? baselines.find(b => b.id === typeMapping.baselineId)
+      : null;
+
+    const existingCustomer = await storage.getCustomerByCwId(company.id);
+
+    const address = [
+      company.addressLine1,
+      company.city,
+      company.state,
+      company.zip,
+    ].filter(Boolean).join(', ');
+
+    previewList.push({
+      cwCompanyId: company.id,
+      name: company.name,
+      typeName: matchingType,
+      address: address || null,
+      phone: company.phoneNumber || null,
+      contactName: company.defaultContact?.name || null,
+      alreadyImported: !!existingCustomer,
+      matchingBaseline: baseline?.name || null,
+    });
+  }
+
+  return previewList;
+}
+
+export async function importSingleCompany(cwCompanyId: number): Promise<{ success: boolean; message: string; customerId?: string }> {
+  const settings = await storage.getConnectwiseSettings();
+  if (!settings) {
+    throw new Error("ConnectWise settings not configured");
+  }
+
+  if (!settings.enabled) {
+    throw new Error("ConnectWise integration is not enabled");
+  }
+
+  const client = createConnectwiseClient({
+    companyId: settings.companyId,
+    publicKey: settings.publicKey,
+    privateKey: settings.privateKey,
+    siteUrl: settings.siteUrl,
+    clientId: settings.clientId,
+  });
+
+  const typeMappings = await storage.getAllTypeMappings();
+  const skuMappings = await storage.getAllSkuMappings();
+  const allTools = await storage.getAllTools();
+  const baselines = await storage.getAllBaselines();
+  const importableTypes = typeMappings.filter(m => m.shouldImport).map(m => m.cwTypeName);
+
+  const company = await client.getCompanyById(cwCompanyId);
+  if (!company) {
+    throw new Error(`Company with ID ${cwCompanyId} not found in ConnectWise`);
+  }
+
+  const companyTypes = company.types?.map(t => t.name) || [];
+  const matchingType = companyTypes.find(t => importableTypes.includes(t));
+
+  if (!matchingType) {
+    throw new Error(`Company "${company.name}" does not have a mapped company type`);
+  }
+
+  const typeMapping = typeMappings.find(m => m.cwTypeName === matchingType);
+  if (!typeMapping) {
+    throw new Error(`No type mapping found for type "${matchingType}"`);
+  }
+
+  const existingCustomer = await storage.getCustomerByCwId(company.id);
+
+  let contactName: string | null = null;
+  let contactEmail: string | null = null;
+  let contactPhone: string | null = null;
+
+  if (company.defaultContact?.id) {
+    try {
+      const contact = await client.getCompanyContact(company.defaultContact.id);
+      contactName = `${contact.firstName} ${contact.lastName}`.trim();
+      
+      const emailItem = contact.communicationItems?.find(c => 
+        c.type.name.toLowerCase().includes('email') && c.defaultFlag
+      ) || contact.communicationItems?.find(c => 
+        c.type.name.toLowerCase().includes('email')
+      );
+      if (emailItem) contactEmail = emailItem.value;
+
+      const phoneItem = contact.communicationItems?.find(c => 
+        c.type.name.toLowerCase().includes('phone') && c.defaultFlag
+      ) || contact.communicationItems?.find(c => 
+        c.type.name.toLowerCase().includes('phone')
+      );
+      if (phoneItem) contactPhone = phoneItem.value;
+    } catch (e) {
+      console.warn(`Failed to fetch contact for company ${company.id}:`, e);
+    }
+  }
+
+  const address = [
+    company.addressLine1,
+    company.city,
+    company.state,
+    company.zip,
+  ].filter(Boolean).join(', ');
+
+  const productSkus = await client.getCompanyProductSKUs(company.id);
+  const activatedToolIds: string[] = [];
+  for (const sku of productSkus) {
+    const skuMapping = skuMappings.find(m => m.sku === sku);
+    if (skuMapping?.toolId) {
+      const tool = allTools.find(t => t.id === skuMapping.toolId);
+      if (tool) {
+        activatedToolIds.push(tool.id);
+      }
+    }
+  }
+
+  let baselineId = typeMapping.baselineId;
+  if (!baselineId && baselines.length > 0) {
+    const defaultBaseline = baselines.find(b => b.name.includes("Standard")) || baselines[0];
+    baselineId = defaultBaseline.id;
+  }
+
+  if (!baselineId) {
+    throw new Error(`No baseline available for company ${company.name}`);
+  }
+
+  const serviceTiers = (typeMapping.serviceTiers || ["Essentials"]) as ("Essentials" | "MSP" | "Break-Fix")[];
+
+  if (existingCustomer) {
+    await storage.updateCustomer(existingCustomer.id, {
+      name: company.name,
+      address: address || null,
+      primaryContactName: contactName,
+      customerPhone: company.phoneNumber || null,
+      contactPhone,
+      contactEmail,
+      serviceTiers,
+      currentToolIds: Array.from(new Set([...existingCustomer.currentToolIds, ...activatedToolIds])),
+      baselineId,
+      cwCompanyId: company.id,
+      cwLastSyncAt: new Date().toISOString(),
+    });
+    return { success: true, message: `Updated existing customer "${company.name}"`, customerId: existingCustomer.id };
+  } else {
+    const newCustomer = await storage.createCustomer({
+      name: company.name,
+      address: address || null,
+      primaryContactName: contactName,
+      customerPhone: company.phoneNumber || null,
+      contactPhone,
+      contactEmail,
+      serviceTiers,
+      currentToolIds: activatedToolIds,
+      baselineId,
+      cwCompanyId: company.id,
+      cwLastSyncAt: new Date().toISOString(),
+    });
+    return { success: true, message: `Imported new customer "${company.name}"`, customerId: newCustomer.id };
+  }
+}

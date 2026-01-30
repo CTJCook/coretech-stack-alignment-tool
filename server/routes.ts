@@ -637,6 +637,33 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/connectwise/preview-companies", async (req, res) => {
+    try {
+      const { previewConnectwiseCompanies } = await import("./connectwise-sync");
+      const companies = await previewConnectwiseCompanies();
+      res.json(companies);
+    } catch (error) {
+      console.error("Failed to preview companies:", error);
+      res.status(500).json({ error: error instanceof Error ? error.message : "Failed to preview companies" });
+    }
+  });
+
+  app.post("/api/connectwise/import-company", async (req, res) => {
+    try {
+      const schema = z.object({ cwCompanyId: z.number() });
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "cwCompanyId is required and must be a number" });
+      }
+      const { importSingleCompany } = await import("./connectwise-sync");
+      const result = await importSingleCompany(parsed.data.cwCompanyId);
+      res.json(result);
+    } catch (error) {
+      console.error("Failed to import company:", error);
+      res.status(500).json({ error: error instanceof Error ? error.message : "Failed to import company" });
+    }
+  });
+
   // Gap Analysis API
   app.get("/api/customers/:id/gap-report", async (req, res) => {
     try {

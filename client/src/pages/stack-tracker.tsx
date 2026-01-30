@@ -2,8 +2,6 @@ import * as React from "react";
 import {
   ArrowRight,
   CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
   ClipboardCopy,
   Download,
   FileText,
@@ -244,22 +242,6 @@ export default function StackTracker() {
   const [newCustomerServiceTiers, setNewCustomerServiceTiers] = React.useState<("Essentials" | "MSP" | "Break-Fix")[]>(["Essentials"]);
 
   const [showImportDialog, setShowImportDialog] = React.useState(false);
-  const categoryTabsRef = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    const tabsEl = categoryTabsRef.current;
-    if (!tabsEl) return;
-
-    const handleWheel = (e: WheelEvent) => {
-      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-        e.preventDefault();
-        tabsEl.scrollLeft += e.deltaY;
-      }
-    };
-
-    tabsEl.addEventListener("wheel", handleWheel, { passive: false });
-    return () => tabsEl.removeEventListener("wheel", handleWheel);
-  }, []);
   const [importFile, setImportFile] = React.useState<File | null>(null);
   const [importParsedData, setImportParsedData] = React.useState<{
     headers: string[];
@@ -1255,7 +1237,7 @@ export default function StackTracker() {
                   </Card>
                 </motion.div>
 
-                <Card className="glass noise relative overflow-hidden rounded-3xl p-5">
+                <Card className="glass noise relative rounded-3xl p-5">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <div className="text-sm font-medium" data-testid="text-stack-editor-title">
@@ -1274,15 +1256,13 @@ export default function StackTracker() {
 
                   <Tabs defaultValue={categories[0].id} className="mt-4">
                     <TabsList
-                      ref={categoryTabsRef}
-                      className="flex w-full justify-start gap-1 overflow-x-auto rounded-2xl bg-white/55 p-1 dark:bg-white/5"
-                      style={{ scrollbarWidth: "thin" }}
+                      className="flex h-auto flex-wrap justify-start gap-1 rounded-2xl bg-white/55 p-2 dark:bg-white/5"
                     >
                       {categories.map((c) => (
                         <TabsTrigger
                           key={c.id}
                           value={c.id}
-                          className="shrink-0 rounded-xl"
+                          className="rounded-xl"
                           data-testid={`tab-${c.id}`}
                         >
                           {c.name}

@@ -525,9 +525,11 @@ export default function StackTracker() {
                     <Sparkles className="h-4 w-4" />
                     <span>MSP Tooling Alignment</span>
                   </div>
-                  <h1 className="mt-3 font-serif text-3xl tracking-tight sm:text-4xl">
-                    CoreTech Stack Alignment Tool
-                  </h1>
+                  <img 
+                    src="/assets/logo.jpeg" 
+                    alt="CoreTech Stack Alignment" 
+                    className="mt-3 h-16 w-auto sm:h-20"
+                  />
                   <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
                     Track each customer's current stack against a baseline, then generate an actionable gap report.
                   </p>
@@ -690,12 +692,12 @@ export default function StackTracker() {
                   <span data-testid="text-product-kicker">MSP Tooling Alignment</span>
                 </div>
 
-                <h1
-                  data-testid="text-app-title"
-                  className="mt-3 font-serif text-3xl tracking-tight sm:text-4xl"
-                >
-                  CoreTech Stack Alignment Tool
-                </h1>
+                <img 
+                  src="/assets/logo.jpeg" 
+                  alt="CoreTech Stack Alignment" 
+                  className="mt-3 h-16 w-auto sm:h-20"
+                  data-testid="img-app-logo"
+                />
                 <p data-testid="text-app-subtitle" className="mt-2 max-w-2xl text-sm text-muted-foreground">
                   {headerSubtitle}
                 </p>

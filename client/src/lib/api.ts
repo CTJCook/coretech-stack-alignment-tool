@@ -1,6 +1,30 @@
-import type { Category, Tool, Baseline, Customer, InsertCustomer } from "@shared/schema";
+import type { Category, Tool, Baseline, Customer, InsertCustomer, ConnectwiseSettings, ConnectwiseTypeMapping, ConnectwiseSkuMapping } from "@shared/schema";
 
 const API_BASE = "/api";
+
+interface ConnectwiseSettingsResponse extends Omit<ConnectwiseSettings, "privateKey"> {
+  hasPrivateKey?: boolean;
+}
+
+interface SyncResult {
+  success: boolean;
+  companiesFound: number;
+  companiesImported: number;
+  companiesUpdated: number;
+  companiesSkipped: number;
+  agreementsProcessed: number;
+  toolsActivated: number;
+  errors: string[];
+  duration: number;
+}
+
+interface SyncProgress {
+  status: string;
+  currentStep: string;
+  companiesProcessed: number;
+  companiesTotal: number;
+  errors: string[];
+}
 
 async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -111,5 +135,65 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ data }),
       }),
+  },
+
+  connectwise: {
+    getSettings: () => fetchJSON<ConnectwiseSettingsResponse | null>(`${API_BASE}/connectwise/settings`),
+    saveSettings: (data: {
+      companyId: string;
+      publicKey: string;
+      privateKey: string;
+      siteUrl: string;
+      clientId: string;
+      enabled?: boolean;
+    }) =>
+      fetchJSON<ConnectwiseSettingsResponse>(`${API_BASE}/connectwise/settings`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    testConnection: (data: {
+      companyId: string;
+      publicKey: string;
+      privateKey: string;
+      siteUrl: string;
+      clientId: string;
+      useExistingKey?: boolean;
+    }) =>
+      fetchJSON<{ success: boolean; message: string }>(`${API_BASE}/connectwise/test-connection`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    getCompanyTypes: () => fetchJSON<Array<{ id: number; name: string }>>(`${API_BASE}/connectwise/company-types`),
+    
+    getTypeMappings: () => fetchJSON<ConnectwiseTypeMapping[]>(`${API_BASE}/connectwise/type-mappings`),
+    createTypeMapping: (data: Omit<ConnectwiseTypeMapping, "id">) =>
+      fetchJSON<ConnectwiseTypeMapping>(`${API_BASE}/connectwise/type-mappings`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    updateTypeMapping: (id: string, data: Partial<Omit<ConnectwiseTypeMapping, "id">>) =>
+      fetchJSON<ConnectwiseTypeMapping>(`${API_BASE}/connectwise/type-mappings/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }),
+    deleteTypeMapping: (id: string) =>
+      fetch(`${API_BASE}/connectwise/type-mappings/${id}`, { method: "DELETE" }),
+
+    getSkuMappings: () => fetchJSON<ConnectwiseSkuMapping[]>(`${API_BASE}/connectwise/sku-mappings`),
+    createSkuMapping: (data: Omit<ConnectwiseSkuMapping, "id">) =>
+      fetchJSON<ConnectwiseSkuMapping>(`${API_BASE}/connectwise/sku-mappings`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    updateSkuMapping: (id: string, data: Partial<Omit<ConnectwiseSkuMapping, "id">>) =>
+      fetchJSON<ConnectwiseSkuMapping>(`${API_BASE}/connectwise/sku-mappings/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }),
+    deleteSkuMapping: (id: string) =>
+      fetch(`${API_BASE}/connectwise/sku-mappings/${id}`, { method: "DELETE" }),
+
+    runSync: () => fetchJSON<SyncResult>(`${API_BASE}/connectwise/sync`, { method: "POST" }),
+    getSyncProgress: () => fetchJSON<SyncProgress | null>(`${API_BASE}/connectwise/sync-progress`),
   },
 };

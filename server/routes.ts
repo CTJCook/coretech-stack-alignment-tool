@@ -1,9 +1,11 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertCategorySchema, insertToolSchema, insertBaselineSchema, insertCustomerSchema, serviceTierEnum } from "@shared/schema";
+import { insertCategorySchema, insertToolSchema, insertBaselineSchema, insertCustomerSchema, serviceTierEnum, insertConnectwiseSettingsSchema, insertConnectwiseTypeMappingSchema, insertConnectwiseSkuMappingSchema } from "@shared/schema";
 import { z } from "zod";
 import * as XLSX from "xlsx";
+import { createConnectwiseClient } from "./connectwise-api";
+import { runConnectwiseSync, getSyncProgress } from "./connectwise-sync";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -422,6 +424,215 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Parse file error:", error);
       res.status(500).json({ error: "Failed to parse file" });
+    }
+  });
+
+  // ConnectWise Settings API
+  app.get("/api/connectwise/settings", async (req, res) => {
+    try {
+      const settings = await storage.getConnectwiseSettings();
+      if (settings) {
+        const { privateKey, ...safeSettings } = settings;
+        res.json({ ...safeSettings, hasPrivateKey: !!privateKey });
+      } else {
+        res.json(null);
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch ConnectWise settings" });
+    }
+  });
+
+  app.post("/api/connectwise/settings", async (req, res) => {
+    try {
+      const settings = insertConnectwiseSettingsSchema.parse(req.body);
+      const created = await storage.saveConnectwiseSettings(settings);
+      const { privateKey, ...safeSettings } = created;
+      res.status(201).json({ ...safeSettings, hasPrivateKey: !!privateKey });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to save ConnectWise settings" });
+      }
+    }
+  });
+
+  app.post("/api/connectwise/test-connection", async (req, res) => {
+    try {
+      const { companyId, publicKey, privateKey, siteUrl, clientId, useExistingKey } = req.body;
+      
+      let actualPrivateKey = privateKey;
+      
+      if (useExistingKey && !privateKey) {
+        const settings = await storage.getConnectwiseSettings();
+        if (settings) {
+          actualPrivateKey = settings.privateKey;
+        }
+      }
+      
+      if (!companyId || !publicKey || !actualPrivateKey || !siteUrl || !clientId) {
+        return res.status(400).json({ error: "Missing required credentials" });
+      }
+
+      const client = createConnectwiseClient({
+        companyId,
+        publicKey,
+        privateKey: actualPrivateKey,
+        siteUrl,
+        clientId,
+      });
+
+      const result = await client.testConnection();
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ 
+        success: false, 
+        message: error instanceof Error ? error.message : "Connection test failed" 
+      });
+    }
+  });
+
+  app.get("/api/connectwise/company-types", async (req, res) => {
+    try {
+      const settings = await storage.getConnectwiseSettings();
+      if (!settings) {
+        return res.status(400).json({ error: "ConnectWise settings not configured" });
+      }
+
+      const client = createConnectwiseClient({
+        companyId: settings.companyId,
+        publicKey: settings.publicKey,
+        privateKey: settings.privateKey,
+        siteUrl: settings.siteUrl,
+        clientId: settings.clientId,
+      });
+
+      const types = await client.getCompanyTypes();
+      res.json(types);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch company types" });
+    }
+  });
+
+  // ConnectWise Type Mappings API
+  app.get("/api/connectwise/type-mappings", async (req, res) => {
+    try {
+      const mappings = await storage.getAllTypeMappings();
+      res.json(mappings);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch type mappings" });
+    }
+  });
+
+  app.post("/api/connectwise/type-mappings", async (req, res) => {
+    try {
+      const mapping = insertConnectwiseTypeMappingSchema.parse(req.body);
+      const created = await storage.createTypeMapping(mapping);
+      res.status(201).json(created);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create type mapping" });
+      }
+    }
+  });
+
+  app.patch("/api/connectwise/type-mappings/:id", async (req, res) => {
+    try {
+      const updated = await storage.updateTypeMapping(req.params.id, req.body);
+      if (!updated) {
+        res.status(404).json({ error: "Type mapping not found" });
+      } else {
+        res.json(updated);
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update type mapping" });
+    }
+  });
+
+  app.delete("/api/connectwise/type-mappings/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteTypeMapping(req.params.id);
+      if (!deleted) {
+        res.status(404).json({ error: "Type mapping not found" });
+      } else {
+        res.status(204).send();
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete type mapping" });
+    }
+  });
+
+  // ConnectWise SKU Mappings API
+  app.get("/api/connectwise/sku-mappings", async (req, res) => {
+    try {
+      const mappings = await storage.getAllSkuMappings();
+      res.json(mappings);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch SKU mappings" });
+    }
+  });
+
+  app.post("/api/connectwise/sku-mappings", async (req, res) => {
+    try {
+      const mapping = insertConnectwiseSkuMappingSchema.parse(req.body);
+      const created = await storage.createSkuMapping(mapping);
+      res.status(201).json(created);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create SKU mapping" });
+      }
+    }
+  });
+
+  app.patch("/api/connectwise/sku-mappings/:id", async (req, res) => {
+    try {
+      const updated = await storage.updateSkuMapping(req.params.id, req.body);
+      if (!updated) {
+        res.status(404).json({ error: "SKU mapping not found" });
+      } else {
+        res.json(updated);
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update SKU mapping" });
+    }
+  });
+
+  app.delete("/api/connectwise/sku-mappings/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteSkuMapping(req.params.id);
+      if (!deleted) {
+        res.status(404).json({ error: "SKU mapping not found" });
+      } else {
+        res.status(204).send();
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete SKU mapping" });
+    }
+  });
+
+  // ConnectWise Sync API
+  app.post("/api/connectwise/sync", async (req, res) => {
+    try {
+      const result = await runConnectwiseSync();
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : "Sync failed" 
+      });
+    }
+  });
+
+  app.get("/api/connectwise/sync-progress", async (req, res) => {
+    try {
+      const progress = getSyncProgress();
+      res.json(progress);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get sync progress" });
     }
   });
 

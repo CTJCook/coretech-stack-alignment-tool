@@ -65,6 +65,8 @@ export const customers = pgTable("customers", {
   serviceTiers: text("service_tiers").array().notNull().default(sql`ARRAY[]::text[]`),
   currentToolIds: text("current_tool_ids").array().notNull().default(sql`ARRAY[]::text[]`),
   baselineId: varchar("baseline_id").notNull().references(() => baselines.id, { onDelete: "restrict" }),
+  cwCompanyId: integer("cw_company_id"),
+  cwLastSyncAt: text("cw_last_sync_at"),
 });
 
 export const insertCustomerSchema = createInsertSchema(customers).omit({ id: true }).extend({
@@ -77,3 +79,63 @@ export const insertCustomerSchema = createInsertSchema(customers).omit({ id: tru
 });
 export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
 export type Customer = typeof customers.$inferSelect;
+
+// ConnectWise Integration Tables
+export const connectwiseSettings = pgTable("connectwise_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: text("company_id").notNull(),
+  publicKey: text("public_key").notNull(),
+  privateKey: text("private_key").notNull(),
+  siteUrl: text("site_url").notNull(),
+  clientId: text("client_id").notNull(),
+  enabled: boolean("enabled").notNull().default(false),
+  lastSyncAt: text("last_sync_at"),
+  lastSyncStatus: text("last_sync_status"),
+  lastSyncMessage: text("last_sync_message"),
+});
+
+export const insertConnectwiseSettingsSchema = createInsertSchema(connectwiseSettings).omit({ id: true }).extend({
+  privateKey: z.string().optional(),
+});
+export type InsertConnectwiseSettings = z.infer<typeof insertConnectwiseSettingsSchema>;
+export type ConnectwiseSettings = typeof connectwiseSettings.$inferSelect;
+
+// Map ConnectWise company types to baselines
+export const connectwiseTypeMappings = pgTable("connectwise_type_mappings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  cwTypeName: text("cw_type_name").notNull().unique(),
+  baselineId: varchar("baseline_id").references(() => baselines.id, { onDelete: "set null" }),
+  serviceTiers: text("service_tiers").array().notNull().default(sql`ARRAY['Essentials']::text[]`),
+  shouldImport: boolean("should_import").notNull().default(true),
+});
+
+export const insertConnectwiseTypeMappingSchema = createInsertSchema(connectwiseTypeMappings).omit({ id: true });
+export type InsertConnectwiseTypeMapping = z.infer<typeof insertConnectwiseTypeMappingSchema>;
+export type ConnectwiseTypeMapping = typeof connectwiseTypeMappings.$inferSelect;
+
+// Map ConnectWise SKUs to tools
+export const connectwiseSkuMappings = pgTable("connectwise_sku_mappings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sku: text("sku").notNull().unique(),
+  skuDescription: text("sku_description"),
+  toolId: varchar("tool_id").references(() => tools.id, { onDelete: "cascade" }),
+});
+
+export const insertConnectwiseSkuMappingSchema = createInsertSchema(connectwiseSkuMappings).omit({ id: true });
+export type InsertConnectwiseSkuMapping = z.infer<typeof insertConnectwiseSkuMappingSchema>;
+export type ConnectwiseSkuMapping = typeof connectwiseSkuMappings.$inferSelect;
+
+// Sync log for tracking imports
+export const connectwiseSyncLogs = pgTable("connectwise_sync_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  startedAt: text("started_at").notNull(),
+  completedAt: text("completed_at"),
+  status: text("status").notNull().default("running"),
+  companiesFound: integer("companies_found").default(0),
+  companiesImported: integer("companies_imported").default(0),
+  companiesUpdated: integer("companies_updated").default(0),
+  companiesSkipped: integer("companies_skipped").default(0),
+  agreementsProcessed: integer("agreements_processed").default(0),
+  toolsActivated: integer("tools_activated").default(0),
+  errors: text("errors").array().default(sql`ARRAY[]::text[]`),
+});

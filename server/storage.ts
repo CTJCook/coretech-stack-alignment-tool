@@ -10,11 +10,21 @@ import {
   type InsertBaseline,
   type Customer,
   type InsertCustomer,
+  type ConnectwiseSettings,
+  type InsertConnectwiseSettings,
+  type ConnectwiseTypeMapping,
+  type InsertConnectwiseTypeMapping,
+  type ConnectwiseSkuMapping,
+  type InsertConnectwiseSkuMapping,
   users,
   categories,
   tools,
   baselines,
   customers,
+  connectwiseSettings,
+  connectwiseTypeMappings,
+  connectwiseSkuMappings,
+  connectwiseSyncLogs,
 } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
@@ -44,10 +54,32 @@ export interface IStorage {
 
   getAllCustomers(): Promise<Customer[]>;
   getCustomer(id: string): Promise<Customer | undefined>;
+  getCustomerByCwId(cwCompanyId: number): Promise<Customer | undefined>;
   createCustomer(customer: InsertCustomer): Promise<Customer>;
   createManyCustomers(customers: InsertCustomer[]): Promise<Customer[]>;
   updateCustomer(id: string, customer: Partial<InsertCustomer>): Promise<Customer | undefined>;
   deleteCustomer(id: string): Promise<boolean>;
+
+  // ConnectWise Settings
+  getConnectwiseSettings(): Promise<ConnectwiseSettings | undefined>;
+  saveConnectwiseSettings(settings: InsertConnectwiseSettings): Promise<ConnectwiseSettings>;
+  updateConnectwiseSettings(id: string, settings: Partial<InsertConnectwiseSettings>): Promise<ConnectwiseSettings | undefined>;
+
+  // ConnectWise Type Mappings
+  getAllTypeMappings(): Promise<ConnectwiseTypeMapping[]>;
+  getTypeMapping(id: string): Promise<ConnectwiseTypeMapping | undefined>;
+  getTypeMappingByName(cwTypeName: string): Promise<ConnectwiseTypeMapping | undefined>;
+  createTypeMapping(mapping: InsertConnectwiseTypeMapping): Promise<ConnectwiseTypeMapping>;
+  updateTypeMapping(id: string, mapping: Partial<InsertConnectwiseTypeMapping>): Promise<ConnectwiseTypeMapping | undefined>;
+  deleteTypeMapping(id: string): Promise<boolean>;
+
+  // ConnectWise SKU Mappings
+  getAllSkuMappings(): Promise<ConnectwiseSkuMapping[]>;
+  getSkuMapping(id: string): Promise<ConnectwiseSkuMapping | undefined>;
+  getSkuMappingBySku(sku: string): Promise<ConnectwiseSkuMapping | undefined>;
+  createSkuMapping(mapping: InsertConnectwiseSkuMapping): Promise<ConnectwiseSkuMapping>;
+  updateSkuMapping(id: string, mapping: Partial<InsertConnectwiseSkuMapping>): Promise<ConnectwiseSkuMapping | undefined>;
+  deleteSkuMapping(id: string): Promise<boolean>;
 }
 
 export class DbStorage implements IStorage {
@@ -169,6 +201,107 @@ export class DbStorage implements IStorage {
 
   async deleteCustomer(id: string): Promise<boolean> {
     const result = await db.delete(customers).where(eq(customers.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getCustomerByCwId(cwCompanyId: number): Promise<Customer | undefined> {
+    const result = await db.select().from(customers).where(eq(customers.cwCompanyId, cwCompanyId)).limit(1);
+    return result[0];
+  }
+
+  // ConnectWise Settings
+  async getConnectwiseSettings(): Promise<ConnectwiseSettings | undefined> {
+    const result = await db.select().from(connectwiseSettings).limit(1);
+    return result[0];
+  }
+
+  async saveConnectwiseSettings(settings: InsertConnectwiseSettings): Promise<ConnectwiseSettings> {
+    const existing = await this.getConnectwiseSettings();
+    
+    if (existing) {
+      const updateData: Partial<InsertConnectwiseSettings> = {
+        companyId: settings.companyId,
+        publicKey: settings.publicKey,
+        siteUrl: settings.siteUrl,
+        clientId: settings.clientId,
+        enabled: settings.enabled,
+      };
+      if (settings.privateKey && settings.privateKey.trim() !== "") {
+        updateData.privateKey = settings.privateKey;
+      }
+      const result = await db.update(connectwiseSettings).set(updateData).where(eq(connectwiseSettings.id, existing.id)).returning();
+      return result[0];
+    }
+    
+    const result = await db.insert(connectwiseSettings).values({
+      ...settings,
+      privateKey: settings.privateKey || "",
+    }).returning();
+    return result[0];
+  }
+
+  async updateConnectwiseSettings(id: string, settings: Partial<InsertConnectwiseSettings>): Promise<ConnectwiseSettings | undefined> {
+    const result = await db.update(connectwiseSettings).set(settings).where(eq(connectwiseSettings.id, id)).returning();
+    return result[0];
+  }
+
+  // ConnectWise Type Mappings
+  async getAllTypeMappings(): Promise<ConnectwiseTypeMapping[]> {
+    return db.select().from(connectwiseTypeMappings);
+  }
+
+  async getTypeMapping(id: string): Promise<ConnectwiseTypeMapping | undefined> {
+    const result = await db.select().from(connectwiseTypeMappings).where(eq(connectwiseTypeMappings.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getTypeMappingByName(cwTypeName: string): Promise<ConnectwiseTypeMapping | undefined> {
+    const result = await db.select().from(connectwiseTypeMappings).where(eq(connectwiseTypeMappings.cwTypeName, cwTypeName)).limit(1);
+    return result[0];
+  }
+
+  async createTypeMapping(mapping: InsertConnectwiseTypeMapping): Promise<ConnectwiseTypeMapping> {
+    const result = await db.insert(connectwiseTypeMappings).values(mapping).returning();
+    return result[0];
+  }
+
+  async updateTypeMapping(id: string, mapping: Partial<InsertConnectwiseTypeMapping>): Promise<ConnectwiseTypeMapping | undefined> {
+    const result = await db.update(connectwiseTypeMappings).set(mapping).where(eq(connectwiseTypeMappings.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteTypeMapping(id: string): Promise<boolean> {
+    const result = await db.delete(connectwiseTypeMappings).where(eq(connectwiseTypeMappings.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // ConnectWise SKU Mappings
+  async getAllSkuMappings(): Promise<ConnectwiseSkuMapping[]> {
+    return db.select().from(connectwiseSkuMappings);
+  }
+
+  async getSkuMapping(id: string): Promise<ConnectwiseSkuMapping | undefined> {
+    const result = await db.select().from(connectwiseSkuMappings).where(eq(connectwiseSkuMappings.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getSkuMappingBySku(sku: string): Promise<ConnectwiseSkuMapping | undefined> {
+    const result = await db.select().from(connectwiseSkuMappings).where(eq(connectwiseSkuMappings.sku, sku)).limit(1);
+    return result[0];
+  }
+
+  async createSkuMapping(mapping: InsertConnectwiseSkuMapping): Promise<ConnectwiseSkuMapping> {
+    const result = await db.insert(connectwiseSkuMappings).values(mapping).returning();
+    return result[0];
+  }
+
+  async updateSkuMapping(id: string, mapping: Partial<InsertConnectwiseSkuMapping>): Promise<ConnectwiseSkuMapping | undefined> {
+    const result = await db.update(connectwiseSkuMappings).set(mapping).where(eq(connectwiseSkuMappings.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteSkuMapping(id: string): Promise<boolean> {
+    const result = await db.delete(connectwiseSkuMappings).where(eq(connectwiseSkuMappings.id, id)).returning();
     return result.length > 0;
   }
 }

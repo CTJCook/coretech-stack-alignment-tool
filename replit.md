@@ -48,8 +48,20 @@ Core entities defined in the shared schema:
 - **Categories**: Technology categories (RMM, PSA, etc.) with sort order
 - **Tools**: Software products belonging to categories
 - **Baselines**: Recommended tool configurations with required/optional tools
-- **Customers**: Customer records with their current tool selections
+- **Customers**: Customer records with their current tool selections, optional ConnectWise linkage
 - **Users**: Basic user accounts for authentication
+
+### ConnectWise Integration
+The application integrates with ConnectWise Manage for automated customer and tool synchronization:
+- **ConnectwiseSettings**: API credentials and sync configuration
+- **ConnectwiseTypeMappings**: Maps CW company types to baselines and service tiers
+- **ConnectwiseSkuMappings**: Maps agreement SKUs to application tools
+- **ConnectwiseSyncLogs**: Audit trail for sync operations
+
+Key integration files:
+- `/server/connectwise-api.ts` - ConnectWise REST API client with pagination
+- `/server/connectwise-sync.ts` - Sync service for importing companies and activating tools
+- `/client/src/pages/connectwise-admin.tsx` - Admin UI for managing the integration
 
 ### Development vs Production
 - Development: Vite dev server with HMR, proxied through Express

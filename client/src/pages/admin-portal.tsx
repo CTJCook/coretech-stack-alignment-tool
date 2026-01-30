@@ -11,6 +11,7 @@ import {
   Save,
   X,
   ArrowLeft,
+  Cloud,
 } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -255,9 +256,17 @@ export default function AdminPortal() {
                 Manage categories, tools, and baseline configurations
               </p>
             </div>
-            <Badge variant="secondary" data-testid="badge-admin">
-              Administrator
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Link href="/admin/connectwise">
+                <Button variant="outline" data-testid="button-connectwise-integration">
+                  <Cloud className="mr-2 h-4 w-4" />
+                  ConnectWise
+                </Button>
+              </Link>
+              <Badge variant="secondary" data-testid="badge-admin">
+                Administrator
+              </Badge>
+            </div>
           </div>
 
           <Separator className="my-6" />
